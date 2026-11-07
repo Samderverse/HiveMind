@@ -1,0 +1,1600 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>[hidden]{display:none!important}body{margin:0}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box}</style>
+<title>Honeyspin</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#1c120a">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Figtree:wght@400;600;800&display=swap">
+<style>
+/* Layout: one portrait screen. HUD on top, the hive board fills the middle, thumb controls at the bottom.
+   Single deliberate look: a hive at dusk (dark wax, amber light). */
+:root {
+  --bg: #1c120a;
+  --panel: #2a1b0e;
+  --panel-2: #3a2614;
+  --wax: #f3dfb5;
+  --ink: #fbedd0;
+  --muted: #c4a77c;
+  --honey: #f5a623;
+  --honey-deep: #c97a0a;
+  --pollen: #57a8f0;
+  --mult: #ef5f6f;
+  --good: #5fcf8f;
+  --danger: #ef5f6f;
+  --font-display: 'Bagel Fat One', 'Arial Rounded MT Bold', 'Trebuchet MS', sans-serif;
+  --font-body: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  background: radial-gradient(120% 70% at 50% 45%, #2b1b0c 0%, var(--bg) 70%);
+  background-color: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  overflow: hidden;
+  -webkit-user-select: none; user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible { outline: 3px solid var(--honey); outline-offset: 2px; }
+.app {
+  height: 100%; max-width: 520px; margin: 0 auto;
+  display: flex; flex-direction: column;
+  padding-left: max(12px, env(safe-area-inset-left, 0px));
+  padding-right: max(12px, env(safe-area-inset-right, 0px));
+  padding-block: 8px;
+  box-sizing: border-box;
+  gap: 8px;
+}
+.num { font-variant-numeric: tabular-nums; }
+
+/* ---------- HUD ---------- */
+.hud { display: grid; gap: 6px; }
+.hud-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.where { font-weight: 800; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.where b { color: var(--ink); }
+.hearts { font-size: 18px; letter-spacing: 2px; }
+.hearts .lost { opacity: .22; filter: grayscale(1); }
+.icon-btn { background: var(--panel); border: 1px solid #ffffff14; border-radius: 10px; width: 36px; height: 32px; font-size: 16px; }
+.score-row { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: stretch; }
+.box { background: var(--panel); border: 1px solid #ffffff10; border-radius: 12px; padding: 6px 10px; }
+.score-box { position: relative; overflow: hidden; }
+.score-box .fill { position: absolute; inset: 0 auto 0 0; width: 0%; background: linear-gradient(90deg, #f5a62333, #f5a62366); transition: width .35s ease; }
+.score-box .inner { position: relative; display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+.lbl { font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.big { font-family: var(--font-display); font-size: 26px; line-height: 1.05; }
+.target { font-size: 13px; color: var(--muted); }
+.target b { color: var(--ink); }
+.stat { text-align: center; min-width: 54px; }
+.stat .big { font-size: 22px; }
+.moves.low .big { color: var(--danger); }
+.nectar .big { color: var(--honey); }
+.charms { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.slot {
+  height: 42px; border-radius: 10px; border: 1px dashed #ffffff22; background: #00000022;
+  display: grid; place-items: center; font-size: 22px; position: relative;
+}
+.slot.filled { border: 1px solid #f5a62355; background: var(--panel-2); }
+.slot .cnt { position: absolute; right: 3px; bottom: 1px; font-size: 10px; font-weight: 800; color: var(--honey); }
+.slot.pulse { animation: pulse .5s ease; }
+@keyframes pulse { 40% { transform: scale(1.15); background: #f5a62355; } }
+
+/* ---------- Board ---------- */
+.board-wrap { flex: 1; min-height: 0; position: relative; }
+canvas#board { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
+.tally {
+  position: absolute; left: 50%; top: 6px; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 6px; pointer-events: none;
+  opacity: 0; transition: opacity .15s;
+}
+.tally.show { opacity: 1; }
+.chip { font-family: var(--font-display); font-size: 22px; padding: 2px 12px; border-radius: 10px; min-width: 44px; text-align: center; }
+.chip.p { background: var(--pollen); color: #0b2238; }
+.chip.m { background: var(--mult); color: #3a0710; }
+.chip.x { background: #fff3; color: var(--ink); font-size: 16px; }
+.times { font-family: var(--font-display); font-size: 18px; color: var(--muted); }
+.step-tag { font-weight: 800; font-size: 12px; color: var(--honey); letter-spacing: .06em; text-transform: uppercase; margin-left: 4px; }
+.banner {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(.9);
+  background: var(--panel); border: 2px solid var(--honey); border-radius: 14px; padding: 10px 16px;
+  font-weight: 800; text-align: center; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s;
+  max-width: 80%;
+}
+.banner.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+/* ---------- Controls ---------- */
+.info {
+  min-height: 36px; font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 8px;
+  background: #00000024; border-radius: 10px; padding: 6px 10px;
+}
+.info b { color: var(--ink); }
+.info .use { margin-left: auto; background: var(--honey); color: #2a1600; border: 0; border-radius: 8px; padding: 6px 12px; font-weight: 800; }
+.controls { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; }
+.rot {
+  height: 56px; border-radius: 14px; border: 0; background: var(--honey); color: #2a1600;
+  font-size: 28px; font-weight: 800; box-shadow: 0 4px 0 var(--honey-deep);
+}
+.rot:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--honey-deep); }
+.rot:disabled { opacity: .35; }
+.seed { height: 56px; font-size: 24px; }
+.seed.armed { outline: 3px solid var(--good); }
+
+/* ---------- Screens ---------- */
+.screen {
+  position: fixed; inset: 0; z-index: 20;
+  background: #140c06fa;
+  display: flex; align-items: center; justify-content: center;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-top: calc(16px + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+}
+.card { width: 100%; max-width: 440px; display: grid; gap: 14px; margin: auto; }
+.wordmark { font-family: var(--font-display); font-size: clamp(52px, 16vw, 78px); line-height: .95; color: var(--honey); text-align: center; text-shadow: 0 5px 0 #6b3d05; }
+.byline { text-align: center; color: var(--muted); font-weight: 600; letter-spacing: .05em; }
+.title-hex { display: block; margin: 0 auto; width: 160px; height: 120px; }
+h2 { font-family: var(--font-display); font-weight: 400; font-size: 32px; margin: 0; color: var(--honey); text-align: center; text-wrap: balance; }
+h3 { margin: 0; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+p { margin: 0; line-height: 1.5; }
+.btn {
+  border: 0; border-radius: 14px; padding: 14px 18px; font-weight: 800; font-size: 17px;
+  background: var(--honey); color: #2a1600; box-shadow: 0 4px 0 var(--honey-deep);
+}
+.btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--honey-deep); }
+.btn.ghost { background: var(--panel-2); color: var(--ink); box-shadow: 0 4px 0 #1a0f06; }
+.btn:disabled { opacity: .4; }
+.row { display: flex; gap: 10px; }
+.row > * { flex: 1; }
+.toggles { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.toggle { background: var(--panel); border: 1px solid #ffffff1a; border-radius: 999px; padding: 8px 14px; font-weight: 600; font-size: 14px; }
+.fine { font-size: 12.5px; color: var(--muted); text-align: center; }
+.rounds { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.rcard { background: var(--panel); border-radius: 12px; padding: 10px 8px; text-align: center; border: 2px solid transparent; display: grid; gap: 4px; }
+.rcard.now { border-color: var(--honey); background: var(--panel-2); }
+.rcard.done { opacity: .45; }
+.rcard .nm { font-weight: 800; font-size: 13px; }
+.rcard .tg { font-family: var(--font-display); font-size: 20px; }
+.rcard .sm { font-size: 11.5px; color: var(--muted); }
+.boss { background: #ef5f6f22; border: 1px solid #ef5f6f66; border-radius: 12px; padding: 10px 12px; }
+.boss b { color: var(--mult); }
+.tallylist { display: grid; gap: 6px; background: var(--panel); border-radius: 14px; padding: 12px 14px; }
+.tallylist div { display: flex; justify-content: space-between; }
+.tallylist .tot { border-top: 1px solid #ffffff1a; padding-top: 8px; font-weight: 800; color: var(--honey); }
+.shop-head { display: flex; justify-content: space-between; align-items: center; }
+.wallet { font-family: var(--font-display); font-size: 26px; color: var(--honey); }
+.items { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.item { background: var(--panel); border: 1px solid #ffffff12; border-radius: 14px; padding: 10px; display: grid; gap: 6px; align-content: start; }
+.item .ic { font-size: 28px; }
+.item .nm { font-weight: 800; }
+.item .rar { font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.item .rar.Rare { color: var(--pollen); } .item .rar.Legendary { color: var(--honey); } .item .rar.Uncommon { color: var(--good); }
+.item .ds { font-size: 12.5px; color: var(--muted); line-height: 1.35; }
+.item .buy { margin-top: 4px; border: 0; border-radius: 10px; padding: 8px; font-weight: 800; background: var(--honey); color: #2a1600; }
+.item .buy:disabled { background: var(--panel-2); color: var(--muted); }
+.item.sold { opacity: .4; }
+.owned { display: grid; gap: 6px; }
+.owned-row { display: flex; align-items: center; gap: 8px; background: var(--panel); border-radius: 10px; padding: 6px 10px; font-size: 13.5px; }
+.owned-row .sell { margin-left: auto; background: var(--panel-2); border: 0; border-radius: 8px; padding: 6px 10px; font-weight: 700; font-size: 12.5px; }
+.bag { display: flex; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.bag span { display: inline-flex; align-items: center; gap: 4px; }
+.dot { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.howto ol { margin: 0; padding-left: 20px; display: grid; gap: 8px; line-height: 1.45; }
+.legend { display: grid; gap: 6px; font-size: 13.5px; }
+.toast {
+  position: fixed; left: 50%; bottom: calc(110px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  background: var(--panel-2); border: 1px solid #f5a62366; border-radius: 12px; padding: 8px 14px; font-weight: 600;
+  z-index: 30; opacity: 0; transition: opacity .2s; pointer-events: none; max-width: 90%; text-align: center;
+}
+.toast.show { opacity: 1; }
+.shake { animation: shake .35s; }
+@keyframes shake { 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(3px); } }
+@media (prefers-reduced-motion: reduce) { .shake, .slot.pulse { animation: none; } }
+@media (max-height: 640px) {
+  .charms .slot { height: 34px; font-size: 18px; }
+  .rot, .seed { height: 46px; }
+  .big { font-size: 22px; }
+}
+</style>
+
+</head>
+<body>
+<div class="app" id="app">
+  <div class="hud">
+    <div class="hud-top">
+      <div class="where" id="where">Field <b>1</b> · Small patch</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div class="hearts" id="hearts" aria-label="Hive health"></div>
+        <button class="icon-btn" id="menuBtn" aria-label="Menu">☰</button>
+      </div>
+    </div>
+    <div class="score-row">
+      <div class="box score-box">
+        <div class="fill" id="scoreFill"></div>
+        <div class="inner">
+          <div><div class="lbl">Score</div><div class="big num" id="score">0</div></div>
+          <div class="target">target <b class="num" id="target">0</b></div>
+        </div>
+      </div>
+      <div class="box stat moves" id="movesBox"><div class="lbl">Moves</div><div class="big num" id="moves">20</div></div>
+      <div class="box stat nectar"><div class="lbl">Nectar</div><div class="big num" id="nectar">0</div></div>
+    </div>
+    <div class="charms" id="charms"></div>
+  </div>
+
+  <div class="board-wrap" id="boardWrap">
+    <canvas id="board" aria-label="Hive board. Tap where three cells meet, then rotate."></canvas>
+    <div class="tally" id="tally">
+      <span class="chip p num" id="tPollen">0</span><span class="times">×</span><span class="chip m num" id="tMult">0</span>
+      <span class="chip x num" id="tX" hidden>×1.5</span><span class="step-tag" id="tStep"></span>
+    </div>
+    <div class="banner" id="banner"></div>
+  </div>
+
+  <div class="info" id="info">Tap where three cells meet, then turn them.</div>
+  <div class="controls">
+    <button class="rot" id="ccw" aria-label="Rotate anticlockwise">↺</button>
+    <button class="slot seed" id="seed0" aria-label="Seed slot 1"></button>
+    <button class="slot seed" id="seed1" aria-label="Seed slot 2"></button>
+    <button class="rot" id="cw" aria-label="Rotate clockwise">↻</button>
+  </div>
+</div>
+
+<div class="screen" id="screen"><div class="card" id="screenCard"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== Honeyspin core logic (no DOM) =====
+const Core = (() => {
+  const R = 4;
+  const SQ3 = Math.sqrt(3);
+  const DIRS = [[1,0],[1,-1],[0,-1],[-1,0],[-1,1],[0,1]];
+  const AXES = [[1,0],[0,1],[1,-1]];
+
+  const COLOURS = [
+    { name: 'Amber', hex: '#F5A623' },
+    { name: 'Rose', hex: '#EC5F7C' },
+    { name: 'Mint', hex: '#3DC58B' },
+    { name: 'Sky', hex: '#4D9DEB' },
+    { name: 'Lilac', hex: '#A57BE6' },
+    { name: 'Lime', hex: '#C2D93A' },
+  ];
+
+  const ROUND_NAMES = ['Small patch', 'Big patch', 'Boss bloom'];
+  const ROUND_MOVES = [20, 20, 18];
+  const ROUND_REWARD = [3, 4, 5];
+  const TARGET_MULT = [1, 1.5, 2];
+  const BASE_TARGETS = [800, 1300, 1900, 2400, 3300, 4500, 6000, 8000];
+  const FIELDS = 8;
+
+  const BOSSES = [
+    { id: 'drought', name: 'The Drought', rule: 'One colour scores no pollen' },
+    { id: 'gale', name: 'The Gale', rule: 'Rotations only turn clockwise' },
+    { id: 'hornet', name: 'The Hornet', rule: 'Two extra wasp nests from the start' },
+    { id: 'frost', name: 'The Frost', rule: 'Cascade mult stops growing after step 2' },
+    { id: 'thief', name: 'The Thief', rule: 'Every move costs 1 nectar' },
+  ];
+
+  const CHARMS = [
+    { id: 'busy_bee', name: 'Busy Bee', icon: '🐝', rarity: 'Common', price: 4, desc: '+2 mult for every cascade step after the first' },
+    { id: 'amber_heart', name: 'Amber Heart', icon: '🧡', rarity: 'Common', price: 4, desc: '+4 mult when amber tiles clear' },
+    { id: 'worker_wings', name: 'Worker Wings', icon: '🪽', rarity: 'Common', price: 5, desc: '+3 moves every round' },
+    { id: 'sweet_tooth', name: 'Sweet Tooth', icon: '🍯', rarity: 'Common', price: 4, desc: 'Gold tiles give 2 nectar instead of 1' },
+    { id: 'big_family', name: 'Big Family', icon: '👪', rarity: 'Common', price: 5, desc: '+1 mult for each tile over 3 in a group' },
+    { id: 'smoker', name: 'Smoker', icon: '💨', rarity: 'Uncommon', price: 6, desc: 'Wasp nests start 3 moves slower' },
+    { id: 'reverse_spin', name: 'Reverse Spin', icon: '🔄', rarity: 'Uncommon', price: 6, desc: 'Every 5th rotation is free' },
+    { id: 'comb_collector', name: 'Comb Collector', icon: '📏', rarity: 'Uncommon', price: 6, desc: 'Combs also clear a second line' },
+    { id: 'wildflower', name: 'Wildflower', icon: '🌼', rarity: 'Uncommon', price: 7, desc: '1 in 10 new tiles is wild' },
+    { id: 'last_gasp', name: 'Last Gasp', icon: '😮‍💨', rarity: 'Uncommon', price: 6, desc: '×2 mult on your final move of a round' },
+    { id: 'hoarder', name: 'Hoarder', icon: '🫙', rarity: 'Uncommon', price: 7, desc: '+1 mult for every 5 nectar you hold' },
+    { id: 'royal_guard', name: 'Royal Guard', icon: '🛡️', rarity: 'Rare', price: 9, desc: 'Queens form from 5 matching neighbours instead of 6' },
+    { id: 'swarm_logic', name: 'Swarm Logic', icon: '🧠', rarity: 'Rare', price: 9, desc: 'Cascade step 4 and beyond scores ×1.5' },
+    { id: 'old_beekeeper', name: 'Old Beekeeper', icon: '👴', rarity: 'Rare', price: 10, desc: 'Gains +1 mult after every round won' },
+    { id: 'golden_hive', name: 'Golden Hive', icon: '👑', rarity: 'Legendary', price: 15, desc: 'Gold tiles also count as wild' },
+  ];
+  const RARITY_WEIGHT = { Common: 60, Uncommon: 30, Rare: 9, Legendary: 2 };
+
+  const SEEDS = [
+    { id: 'dandelion', name: 'Dandelion', icon: '🌾', desc: 'Recolour a tile to match most of its neighbours', target: true },
+    { id: 'clover', name: 'Clover', icon: '🍀', desc: '+3 moves this round', target: false },
+    { id: 'thistle', name: 'Thistle', icon: '🌵', desc: 'Destroy one tile', target: true },
+    { id: 'lavender', name: 'Lavender', icon: '💜', desc: 'Calm all wasps: +3 to every countdown', target: false },
+    { id: 'sunflower', name: 'Sunflower', icon: '🌻', desc: 'Shuffle the board for free', target: false },
+  ];
+
+  // ---------- RNG ----------
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  const pick = (rng, arr) => arr[Math.floor(rng() * arr.length)];
+  function shuffle(rng, arr) {
+    for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
+    return arr;
+  }
+
+  // ---------- Geometry ----------
+  const key = (q, r) => q + ',' + r;
+  const CELLS = [];
+  const CELL = {};
+  for (let q = -R; q <= R; q++) for (let r = -R; r <= R; r++) {
+    if (Math.abs(q + r) > R) continue;
+    const c = { q, r, key: key(q, r), x: 1.5 * q, y: SQ3 * (r + q / 2) };
+    CELLS.push(c); CELL[c.key] = c;
+  }
+  for (const c of CELLS) {
+    c.nb = DIRS.map(([dq, dr]) => CELL[key(c.q + dq, c.r + dr)]).filter(Boolean).map(n => n.key);
+  }
+  // columns: same q, sorted top (small y) to bottom
+  const COLUMNS = {};
+  for (const c of CELLS) (COLUMNS[c.q] = COLUMNS[c.q] || []).push(c.key);
+  for (const q in COLUMNS) COLUMNS[q].sort((a, b) => CELL[a].y - CELL[b].y);
+
+  const TRIOS = [];
+  {
+    const seen = new Set();
+    for (const c of CELLS) for (let i = 0; i < 6; i++) {
+      const a = DIRS[i], b = DIRS[(i + 1) % 6];
+      const k1 = key(c.q + a[0], c.r + a[1]), k2 = key(c.q + b[0], c.r + b[1]);
+      if (!CELL[k1] || !CELL[k2]) continue;
+      const keys = [c.key, k1, k2];
+      const id = [...keys].sort().join('|');
+      if (seen.has(id)) continue; seen.add(id);
+      const cx = (c.x + CELL[k1].x + CELL[k2].x) / 3, cy = (c.y + CELL[k1].y + CELL[k2].y) / 3;
+      keys.sort((p, s) => Math.atan2(CELL[p].y - cy, CELL[p].x - cx) - Math.atan2(CELL[s].y - cy, CELL[s].x - cx));
+      TRIOS.push({ keys, x: cx, y: cy });
+    }
+  }
+  const TRIOS_BY_CELL = {};
+  for (const c of CELLS) TRIOS_BY_CELL[c.key] = TRIOS.filter(t => t.keys.includes(c.key));
+
+  // ---------- Tiles & bag ----------
+  let tileId = 1;
+  const makeTile = (t) => Object.assign({ id: tileId++, c: 0, kind: 'n', gold: false, glass: false, wild: false }, t);
+
+  function newBag(colours) {
+    const bag = [];
+    for (let c = 0; c < colours; c++) for (let i = 0; i < 8; i++) bag.push({ c });
+    return bag;
+  }
+
+  function drawTile(st) {
+    const tpl = pick(st.rng, st.bag);
+    const t = makeTile({ c: tpl.c, gold: !!tpl.gold, glass: !!tpl.glass, wild: !!tpl.wild });
+    if (has(st, 'wildflower') && st.rng() < 0.1) t.wild = true;
+    return t;
+  }
+
+  const has = (st, id) => st.charms.some(c => c.id === id);
+
+  function isWild(st, t) {
+    return t.kind === 'queen' || t.wild || (t.gold && has(st, 'golden_hive'));
+  }
+  const matchable = (t) => t && t.kind !== 'wasp';
+
+  // ---------- Matching ----------
+  // A set of tiles matches when they share one colour (wilds fit any) and at least one is not wild.
+  function sharedColour(st, board, keys, minReal) {
+    let c = -1, real = 0;
+    for (const k of keys) {
+      const t = board[k];
+      if (!matchable(t)) return -1;
+      if (isWild(st, t)) continue;
+      real++;
+      if (c === -1) c = t.c; else if (t.c !== c) return -1;
+    }
+    return real >= (minReal || 1) ? c : -1;
+  }
+
+  // Matches are triangles: three touching cells of one colour. Touching triangles of the
+  // same colour merge into one group. A ring of six round any centre is a group too.
+  function findGroups(st, board) {
+    const tris = [];
+    for (const trio of TRIOS) {
+      const c = sharedColour(st, board, trio.keys);
+      if (c >= 0) tris.push({ c, keys: trio.keys });
+    }
+    const groups = [];
+    const used = new Array(tris.length).fill(false);
+    for (let i = 0; i < tris.length; i++) {
+      if (used[i]) continue;
+      used[i] = true;
+      const keys = new Set(tris[i].keys); const c = tris[i].c;
+      let grew = true;
+      while (grew) {
+        grew = false;
+        for (let j = 0; j < tris.length; j++) {
+          if (used[j] || tris[j].c !== c) continue;
+          if (tris[j].keys.some(k => keys.has(k))) { used[j] = true; tris[j].keys.forEach(k => keys.add(k)); grew = true; }
+        }
+      }
+      groups.push({ c, keys: [...keys] });
+    }
+    const need = has(st, 'royal_guard') ? 5 : 6;
+    for (const cell of CELLS) {
+      if (cell.nb.length < 6) continue;
+      // find a colour shared by at least `need` ring tiles
+      const counts = {};
+      for (const n of cell.nb) { const t = board[n]; if (matchable(t) && !isWild(st, t)) counts[t.c] = (counts[t.c] || 0) + 1; }
+      const wilds = cell.nb.filter(n => matchable(board[n]) && isWild(st, board[n])).length;
+      for (const c in counts) {
+        if (counts[c] + wilds >= need) {
+          const ring = cell.nb.filter(n => matchable(board[n]) && (isWild(st, board[n]) || board[n].c === +c));
+          groups.push({ c: +c, keys: ring, ring: true, centre: cell.key });
+        }
+      }
+    }
+    return groups;
+  }
+
+  function makesMatchAt(st, board, k) {
+    for (const trio of TRIOS_BY_CELL[k]) if (sharedColour(st, board, trio.keys) >= 0) return true;
+    return false;
+  }
+
+  function lineAxis(groupSet, k) {
+    const cell = CELL[k];
+    for (let a = 0; a < 3; a++) {
+      const [dq, dr] = AXES[a];
+      let n = 1;
+      for (const s of [1, -1]) {
+        let q = cell.q + dq * s, r = cell.r + dr * s;
+        while (groupSet.has(key(q, r))) { n++; q += dq * s; r += dr * s; }
+      }
+      if (n >= 4) return a;
+    }
+    return -1;
+  }
+
+  function lineCells(k, axis) {
+    const c = CELL[k];
+    return CELLS.filter(o => axis === 0 ? o.r === c.r : axis === 1 ? o.q === c.q : (o.q + o.r) === (c.q + c.r)).map(o => o.key);
+  }
+
+  // ---------- Rotation ----------
+  function rotate(board, trio, dir) {
+    const ks = trio.keys;
+    const old = ks.map(k => board[k]);
+    for (let i = 0; i < 3; i++) {
+      const to = dir > 0 ? (i + 1) % 3 : (i + 2) % 3;
+      board[ks[to]] = old[i];
+    }
+  }
+
+  function hasMove(st, board) {
+    for (const trio of TRIOS) {
+      for (const dir of [1, -1]) {
+        if (dir < 0 && st.boss && st.boss.id === 'gale') continue;
+        rotate(board, trio, dir);
+        const ok = findGroups(st, board).length > 0;
+        rotate(board, trio, -dir);
+        if (ok) return true;
+      }
+    }
+    return false;
+  }
+
+  function fillBoard(st) {
+    const board = {};
+    for (let attempt = 0; attempt < 60; attempt++) {
+      for (const c of CELLS) board[c.key] = null;
+      for (const c of CELLS) {
+        let t;
+        for (let i = 0; i < 12; i++) {
+          t = drawTile(st); t.wild = false;
+          board[c.key] = t;
+          if (findGroups(st, board).length === 0) break;
+        }
+      }
+      if (findGroups(st, board).length === 0 && hasMove(st, board)) return board;
+    }
+    return board;
+  }
+
+  function shuffleBoard(st) {
+    const board = st.board;
+    const tiles = CELLS.map(c => board[c.key]);
+    const before = {}; for (const c of CELLS) before[board[c.key].id] = c.key;
+    for (let i = 0; i < 80; i++) {
+      shuffle(st.rng, tiles);
+      CELLS.forEach((c, j) => board[c.key] = tiles[j]);
+      if (findGroups(st, board).length === 0 && hasMove(st, board)) break;
+    }
+    if (!hasMove(st, board)) {
+      for (const c of CELLS) if (board[c.key].kind === 'n') board[c.key] = drawTile(st);
+    }
+    return CELLS.map(c => ({ tile: board[c.key], from: before[board[c.key].id] || null, to: c.key }));
+  }
+
+  function groupSizeAt(st, board, k0) {
+    const t0 = board[k0]; if (!matchable(t0)) return 0;
+    const c = t0.c; const seen = new Set([k0]); const stack = [k0];
+    while (stack.length) {
+      const k = stack.pop();
+      for (const n of CELL[k].nb) {
+        if (seen.has(n)) continue; const t = board[n];
+        if (matchable(t) && (t.c === c || isWild(st, t))) { seen.add(n); stack.push(n); }
+      }
+    }
+    return seen.size;
+  }
+
+  // ---------- Gravity ----------
+  function collapse(st) {
+    const board = st.board;
+    const moves = [];
+    for (const q in COLUMNS) {
+      const col = COLUMNS[q];
+      const stack = [];
+      for (let i = col.length - 1; i >= 0; i--) if (board[col[i]]) stack.push({ t: board[col[i]], from: col[i] });
+      let idx = 0;
+      for (let i = col.length - 1; i >= 0; i--) {
+        if (idx < stack.length) {
+          const s = stack[idx++]; board[col[i]] = s.t;
+          if (s.from !== col[i]) moves.push({ tile: s.t, from: s.from, to: col[i] });
+        } else board[col[i]] = null;
+      }
+    }
+    // refill gaps, mostly avoiding instant matches so cascades come from falling tiles
+    for (const q in COLUMNS) {
+      const col = COLUMNS[q];
+      for (let i = col.length - 1; i >= 0; i--) {
+        if (board[col[i]]) continue;
+        {
+          let t;
+          for (let a = 0; a < 10; a++) {
+            t = drawTile(st); board[col[i]] = t;
+            if (isWild(st, t) || !makesMatchAt(st, board, col[i])) break;
+          }
+          const spawnRank = i + 1; // how far above the top it starts
+          moves.push({ tile: t, from: null, spawnRank, col: q, to: col[i] });
+        }
+      }
+    }
+    return moves;
+  }
+
+  // ---------- Resolve one cascade step ----------
+  function resolveStep(st, step, pivotKeys, isLastMove) {
+    const board = st.board;
+    const rd = st.round;
+    let jellyBlast = false;
+    let groups = findGroups(st, board);
+    if (rd.jellyPending) { jellyBlast = true; rd.jellyPending = false; }
+    if (!groups.length && !jellyBlast) return null;
+
+    const groupSet = new Set();
+    for (const g of groups) for (const k of g.keys) groupSet.add(k);
+
+    // creations
+    const created = [];
+    const protectedKeys = new Set();
+    const queenColour = {};
+    for (const g of groups) if (g.ring && !protectedKeys.has(g.centre)) {
+      protectedKeys.add(g.centre);
+      created.push({ key: g.centre, tile: makeTile({ c: g.c, kind: 'queen' }) });
+    }
+    for (const g of groups) for (const k of g.keys) if (board[k].kind === 'queen' && queenColour[k] === undefined) queenColour[k] = g.c;
+    for (const g of groups) {
+      if (g.ring) continue;
+      const gs = new Set(g.keys);
+      if (g.keys.length < 4) continue;
+      let pivot = (pivotKeys || []).find(k => gs.has(k) && !protectedKeys.has(k));
+      if (!pivot) pivot = [...g.keys].filter(k => !protectedKeys.has(k)).sort((a, b) => CELL[b].y - CELL[a].y)[0];
+      if (!pivot) continue;
+      if (g.keys.length >= 5) {
+        protectedKeys.add(pivot);
+        created.push({ key: pivot, tile: makeTile({ c: g.c, kind: 'burst' }) });
+      } else {
+        let axis = -1;
+        for (const k of g.keys) { axis = lineAxis(gs, k); if (axis >= 0) break; }
+        if (axis < 0) axis = Math.floor(st.rng() * 3);
+        protectedKeys.add(pivot);
+        created.push({ key: pivot, tile: makeTile({ c: g.c, kind: 'comb', axis }) });
+      }
+    }
+
+    // clear set + special expansion
+    const clear = new Set();
+    const queue = [];
+    const addClear = (k) => {
+      if (protectedKeys.has(k) || clear.has(k) || !board[k]) return;
+      clear.add(k); queue.push(k);
+    };
+    if (jellyBlast) for (const c of CELLS) addClear(c.key);
+    for (const k of groupSet) addClear(k);
+    // wasps next to matched groups
+    for (const k of groupSet) for (const n of CELL[k].nb) if (board[n] && board[n].kind === 'wasp') addClear(n);
+
+    const triggered = [];
+    while (queue.length) {
+      const k = queue.shift(); const t = board[k];
+      if (t.kind === 'comb') {
+        triggered.push({ key: k, kind: 'comb', axis: t.axis });
+        lineCells(k, t.axis).forEach(addClear);
+        if (has(st, 'comb_collector')) lineCells(k, (t.axis + 1) % 3).forEach(addClear);
+      } else if (t.kind === 'burst') {
+        triggered.push({ key: k, kind: 'burst' });
+        CELL[k].nb.forEach(addClear);
+      } else if (t.kind === 'queen') {
+        let c = queenColour[k];
+        if (c === undefined) c = Math.floor(st.rng() * st.colours);
+        triggered.push({ key: k, kind: 'queen', c });
+        for (const cell of CELLS) { const o = board[cell.key]; if (o && o.kind !== 'wasp' && o.c === c) addClear(cell.key); }
+      }
+    }
+
+    // scoring
+    const drought = st.boss && st.boss.id === 'drought' ? st.droughtColour : -1;
+    let pollen = 0, glassCount = 0, gold = 0, amber = false, waspsCleared = 0;
+    const clearedTiles = [];
+    for (const k of clear) {
+      const t = board[k];
+      clearedTiles.push({ key: k, tile: t });
+      if (t.kind === 'wasp') { pollen += 25; waspsCleared++; continue; }
+      if (t.c !== drought) pollen += 10;
+      if (t.c === 0) amber = true;
+      if (t.glass) {
+        glassCount++;
+        if (st.rng() < 0.25) { const i = st.bag.findIndex(b => b.glass); if (i >= 0) st.bag.splice(i, 1); }
+      }
+      if (t.gold) gold += has(st, 'sweet_tooth') ? 2 : 1;
+    }
+    for (const tr of triggered) pollen += tr.kind === 'comb' ? 30 : tr.kind === 'burst' ? 40 : 60;
+    for (const cr of created) pollen += cr.tile.kind === 'queen' ? 50 : 20;
+
+    const frost = st.boss && st.boss.id === 'frost';
+    let mult = 1 + (frost ? Math.min(step, 2) : step);
+    if (has(st, 'busy_bee')) mult += 2 * (step - 1);
+    if (has(st, 'amber_heart') && amber) mult += 4;
+    if (has(st, 'big_family')) for (const g of groups) mult += Math.max(0, g.keys.length - 3);
+    if (has(st, 'hoarder')) mult += Math.floor(st.nectar / 5);
+    const ob = st.charms.find(c => c.id === 'old_beekeeper'); if (ob) mult += ob.counter || 0;
+    let xmult = Math.pow(1.5, glassCount);
+    if (has(st, 'swarm_logic') && step >= 4) xmult *= 1.5;
+    if (has(st, 'last_gasp') && isLastMove) xmult *= 2;
+    if (rd.jelly) xmult *= 2;
+    if (jellyBlast) { rd.jelly = true; xmult *= 2; }
+    xmult = Math.round(xmult * 100) / 100;
+    const score = Math.round(pollen * mult * xmult);
+
+    rd.score += score;
+    st.nectar += gold;
+    rd.goldEarned += gold;
+
+    // apply
+    for (const k of clear) board[k] = null;
+    for (const cr of created) board[cr.key] = cr.tile;
+    // royal jelly check
+    for (const cell of CELLS) {
+      const t = board[cell.key];
+      if (t && t.kind === 'queen' && cell.nb.filter(n => board[n] && board[n].kind === 'queen').length >= 2) rd.jellyPending = true;
+    }
+    const moves = collapse(st);
+    return { step, groups, clearedTiles, created, triggered, moves, pollen, mult, xmult, score, gold, jellyBlast, waspsCleared };
+  }
+
+  // ---------- Wasps ----------
+  function waspStart(st) { return 9 + (has(st, 'smoker') ? 3 : 0); }
+  function spawnWasp(st) {
+    const opts = CELLS.filter(c => st.board[c.key] && st.board[c.key].kind === 'n' && !st.board[c.key].gold);
+    if (!opts.length) return null;
+    const c = pick(st.rng, opts);
+    const t = makeTile({ c: -1, kind: 'wasp', count: waspStart(st) });
+    st.board[c.key] = t;
+    return c.key;
+  }
+  function tickWasps(st) {
+    const stung = [];
+    for (const c of CELLS) {
+      const t = st.board[c.key];
+      if (t && t.kind === 'wasp') {
+        t.count--;
+        if (t.count <= 0) { stung.push(c.key); st.hearts--; t.count = waspStart(st); }
+      }
+    }
+    return stung;
+  }
+  const waspCount = (st) => CELLS.filter(c => st.board[c.key] && st.board[c.key].kind === 'wasp').length;
+
+  // ---------- Run ----------
+  function newRun(seed) {
+    seed = seed ?? Math.floor(Math.random() * 1e9);
+    const rng = mulberry32(seed);
+    const st = {
+      seed, rng, field: 1, roundIdx: 0, hearts: 3, nectar: 4, charms: [], seeds: [],
+      colours: 5, bag: newBag(5), boss: null, bossQueue: [], board: null, round: null, shop: null,
+      stats: { rounds: 0, bestStep: 0, bestScore: 0 }, over: false, won: false,
+    };
+    return st;
+  }
+
+  function target(st) {
+    return Math.round(BASE_TARGETS[st.field - 1] * TARGET_MULT[st.roundIdx] / 10) * 10;
+  }
+
+  function startRound(st) {
+    if (st.field >= 4 && st.colours < 6) {
+      st.colours = 6;
+      for (let i = 0; i < 8; i++) st.bag.push({ c: 5 });
+    }
+    st.boss = null;
+    if (st.roundIdx === 2) {
+      if (!st.bossQueue.length) st.bossQueue = shuffle(st.rng, BOSSES.slice());
+      st.boss = st.bossQueue.pop();
+      if (st.boss.id === 'drought') st.droughtColour = Math.floor(st.rng() * st.colours);
+    }
+    const moves = ROUND_MOVES[st.roundIdx] + (has(st, 'worker_wings') ? 3 : 0);
+    st.round = { target: target(st), moves, movesMax: moves, score: 0, rotations: 0, jelly: false, jellyPending: false, goldEarned: 0, result: null };
+    st.board = fillBoard(st);
+    let nests = st.field >= 2 ? Math.min(3, Math.floor(st.field / 2)) : 0;
+    if (st.boss && st.boss.id === 'hornet') nests += 2;
+    for (let i = 0; i < nests; i++) spawnWasp(st);
+    return st.round;
+  }
+
+  // Called by UI before animating: spend the move & rotate
+  function doRotate(st, trioIndex, dir) {
+    const rd = st.round;
+    if (dir < 0 && st.boss && st.boss.id === 'gale') return false;
+    rotate(st.board, TRIOS[trioIndex], dir);
+    rd.rotations++;
+    const free = has(st, 'reverse_spin') && rd.rotations % 5 === 0;
+    if (!free) rd.moves--;
+    if (st.boss && st.boss.id === 'thief') st.nectar = Math.max(0, st.nectar - 1);
+    return { free };
+  }
+
+  // After all cascades of a move
+  function endMove(st) {
+    const stung = tickWasps(st);
+    let spawned = null;
+    const cap = Math.min(3, Math.floor(st.field / 2)) + (st.boss && st.boss.id === 'hornet' ? 2 : 0);
+    if (st.field >= 3 && waspCount(st) < cap && st.rng() < 0.12) spawned = spawnWasp(st);
+    return { stung, spawned };
+  }
+
+  function roundStatus(st) {
+    const rd = st.round;
+    if (st.hearts <= 0) return 'lost';
+    if (rd.score >= rd.target) return 'won';
+    if (rd.moves <= 0) return 'lost';
+    return 'playing';
+  }
+
+  function finishRound(st) {
+    const rd = st.round;
+    const unused = Math.min(5, rd.moves);
+    const reward = ROUND_REWARD[st.roundIdx];
+    const interest = Math.min(5, Math.floor(st.nectar / 5));
+    st.nectar += reward + unused + interest;
+    const ob = st.charms.find(c => c.id === 'old_beekeeper'); if (ob) ob.counter = (ob.counter || 0) + 1;
+    st.stats.rounds++;
+    const summary = { reward, unused, interest, gold: rd.goldEarned, score: rd.score, target: rd.target };
+    if (st.roundIdx === 2) st.hearts = Math.min(3, st.hearts + 1);
+    const wasBossOfLast = st.roundIdx === 2 && st.field === FIELDS;
+    if (wasBossOfLast) { st.won = true; st.over = true; }
+    else {
+      st.roundIdx++;
+      if (st.roundIdx > 2) { st.roundIdx = 0; st.field++; }
+    }
+    return summary;
+  }
+
+  // ---------- Shop ----------
+  function rollCharm(st, exclude) {
+    const pool = CHARMS.filter(c => !st.charms.some(o => o.id === c.id) && !exclude.includes(c.id));
+    if (!pool.length) return null;
+    const total = pool.reduce((s, c) => s + RARITY_WEIGHT[c.rarity], 0);
+    let x = st.rng() * total;
+    for (const c of pool) { x -= RARITY_WEIGHT[c.rarity]; if (x <= 0) return c; }
+    return pool[pool.length - 1];
+  }
+  function rollStock(st) {
+    const items = [];
+    const ex = [];
+    for (let i = 0; i < 2; i++) {
+      const c = rollCharm(st, ex);
+      if (c) { ex.push(c.id); items.push({ type: 'charm', charm: c, price: c.price, sold: false }); }
+    }
+    const s = pick(st.rng, SEEDS);
+    items.push({ type: 'seed', seed: s, price: 3, sold: false });
+    const col = Math.floor(st.rng() * st.colours);
+    const packs = [
+      { type: 'pack', pack: 'gold', name: '3 gold tiles', icon: '✨', desc: 'Add 3 gold tiles to your bag. Each gives nectar when cleared.', price: 4 },
+      { type: 'pack', pack: 'glass', name: '2 glass tiles', icon: '🔮', desc: 'Add 2 glass tiles: ×1.5 mult when cleared, may shatter.', price: 5 },
+      { type: 'pack', pack: 'wild', name: '2 wild tiles', icon: '🌈', desc: 'Add 2 wild tiles that match any colour.', price: 6 },
+      { type: 'pack', pack: 'remove', colour: col, name: `Remove 4 ${COLOURS[col].name.toLowerCase()}`, icon: '✂️', desc: `Take 4 ${COLOURS[col].name.toLowerCase()} tiles out of your bag so other colours come more often.`, price: 3 },
+    ];
+    const p = pick(st.rng, packs); p.sold = false;
+    items.push(p);
+    return items;
+  }
+  function openShop(st) { st.shop = { items: rollStock(st), rerollCost: 2 }; return st.shop; }
+  function reroll(st) {
+    if (st.nectar < st.shop.rerollCost) return false;
+    st.nectar -= st.shop.rerollCost; st.shop.rerollCost++;
+    st.shop.items = rollStock(st); return true;
+  }
+  function buy(st, i) {
+    const it = st.shop.items[i];
+    if (!it || it.sold || st.nectar < it.price) return 'nectar';
+    if (it.type === 'charm') {
+      if (st.charms.length >= 5) return 'slots';
+      st.charms.push(Object.assign({}, it.charm, { counter: 0 }));
+    } else if (it.type === 'seed') {
+      if (st.seeds.length >= 2) return 'slots';
+      st.seeds.push(it.seed);
+    } else {
+      const counts = {};
+      if (it.pack === 'gold' || it.pack === 'glass' || it.pack === 'wild') {
+        const n = it.pack === 'gold' ? 3 : 2;
+        for (let j = 0; j < n; j++) st.bag.push({ c: Math.floor(st.rng() * st.colours), [it.pack]: true });
+      } else {
+        let n = 4;
+        for (let j = st.bag.length - 1; j >= 0 && n > 0; j--) if (st.bag[j].c === it.colour && !st.bag[j].gold && !st.bag[j].glass) { st.bag.splice(j, 1); n--; }
+      }
+    }
+    st.nectar -= it.price; it.sold = true;
+    return 'ok';
+  }
+  function sellCharm(st, i) {
+    const c = st.charms[i]; if (!c) return;
+    st.nectar += Math.floor(c.price / 2);
+    st.charms.splice(i, 1);
+  }
+
+  // ---------- Seeds ----------
+  function useSeed(st, i, cellKey) {
+    const s = st.seeds[i]; if (!s) return null;
+    const res = { id: s.id };
+    if (s.id === 'clover') { st.round.moves += 3; }
+    else if (s.id === 'lavender') { for (const c of CELLS) { const t = st.board[c.key]; if (t && t.kind === 'wasp') t.count += 3; } }
+    else if (s.id === 'sunflower') { res.moves = shuffleBoard(st); }
+    else if (s.id === 'thistle') {
+      if (!cellKey || !st.board[cellKey]) return null;
+      res.cleared = [{ key: cellKey, tile: st.board[cellKey] }];
+      st.board[cellKey] = null; res.moves = collapse(st);
+    } else if (s.id === 'dandelion') {
+      const t = st.board[cellKey];
+      if (!t || t.kind === 'wasp') return null;
+      const counts = {};
+      for (const n of CELL[cellKey].nb) { const o = st.board[n]; if (o && o.kind !== 'wasp' && !isWild(st, o)) counts[o.c] = (counts[o.c] || 0) + 1; }
+      let best = t.c, bn = -1;
+      for (const c in counts) if (counts[c] > bn && +c !== t.c) { bn = counts[c]; best = +c; }
+      t.c = best; res.key = cellKey;
+    }
+    st.seeds.splice(i, 1);
+    return res;
+  }
+
+  return {
+    R, SQ3, CELLS, CELL, TRIOS, COLUMNS, COLOURS, CHARMS, SEEDS, BOSSES, ROUND_NAMES, FIELDS,
+    newRun, startRound, doRotate, resolveStep, endMove, roundStatus, finishRound, hasMove, shuffleBoard,
+    openShop, reroll, buy, sellCharm, useSeed, isWild, has, findGroups, rotate, target, mulberry32,
+  };
+})();
+if (typeof module !== 'undefined') module.exports = Core;
+
+</script>
+<script>
+(() => {
+const $ = (id) => document.getElementById(id);
+const C = Core;
+const fmt = (n) => Math.round(n).toLocaleString('en-GB');
+
+// ---------- Settings & storage ----------
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('honeyspin.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('honeyspin.' + k, JSON.stringify(v)); } catch (e) {} },
+};
+const settings = Object.assign({ sound: true, speed: 1 }, store.get('settings', {}));
+const SPEEDS = [1, 2, 4];
+const dur = (ms) => ms / settings.speed;
+
+// ---------- Audio ----------
+let actx = null;
+function audio() {
+  if (!settings.sound) return null;
+  try { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); } catch (e) { return null; }
+  return actx;
+}
+function tone(freq, len = 0.08, type = 'sine', vol = 0.12, slide = 0, delay = 0) {
+  const a = audio(); if (!a) return;
+  const t = a.currentTime + delay;
+  const o = a.createOscillator(), g = a.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, t);
+  if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(40, freq + slide), t + len);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+  o.connect(g).connect(a.destination); o.start(t); o.stop(t + len + 0.02);
+}
+const sfx = {
+  click() { tone(520, 0.05, 'triangle', 0.08); },
+  turn() { tone(300, 0.07, 'triangle', 0.1, 120); },
+  clear(step) { const base = 440 * Math.pow(2, (step - 1) * 2 / 12); tone(base, 0.12, 'sine', 0.12); tone(base * 1.5, 0.14, 'sine', 0.06, 0, 0.05); },
+  special() { tone(660, 0.2, 'square', 0.05, 440); },
+  sting() { tone(140, 0.35, 'sawtooth', 0.12, -60); },
+  coin() { tone(988, 0.06, 'square', 0.05); tone(1319, 0.12, 'square', 0.05, 0, 0.06); },
+  win() { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.18, 'triangle', 0.1, 0, i * 0.09)); },
+  lose() { [392, 330, 262].forEach((f, i) => tone(f, 0.28, 'triangle', 0.1, 0, i * 0.16)); },
+  buzz() { tone(220, 0.25, 'sawtooth', 0.04, 30); },
+};
+const buzz = (ms) => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
+
+// ---------- State ----------
+let st = null;
+let busy = false;
+let selected = -1;          // trio index
+let armedSeed = -1;
+const anims = new Map();    // tile.id -> {fx,fy,t0,dur,arc}
+let dying = [];             // {tile,x,y,t0,dur}
+let particles = [];
+let floaters = [];
+let flashes = [];           // {key,t0}
+let shakeT = 0;
+let geo = { s: 30, ox: 0, oy: 0, w: 0, h: 0, dpr: 1 };
+
+// ---------- Canvas & geometry ----------
+const cv = $('board'), ctx = cv.getContext('2d');
+function layout() {
+  const r = $('boardWrap').getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
+  const s = Math.min(r.width / (1.5 * 2 * C.R + 2 + 0.3), (r.height - 34) / (C.SQ3 * (2 * C.R + 1) + 0.3));
+  geo = { s, ox: r.width / 2, oy: r.height / 2 + 14, w: r.width, h: r.height, dpr };
+}
+new ResizeObserver(layout).observe($('boardWrap'));
+const px = (x, y) => [geo.ox + x * geo.s, geo.oy + y * geo.s];
+
+function hexPath(cx, cy, r) {
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) { const a = Math.PI / 3 * i; const x = cx + r * Math.cos(a), y = cy + r * Math.sin(a); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+  ctx.closePath();
+}
+const ease = (t) => 1 - Math.pow(1 - t, 3);
+const easeBounce = (t) => { const n = 7.5625, d = 2.75; if (t < 1 / d) return n * t * t; if (t < 2 / d) return n * (t -= 1.5 / d) * t + .75; if (t < 2.5 / d) return n * (t -= 2.25 / d) * t + .9375; return n * (t -= 2.625 / d) * t + .984375; };
+
+function tilePos(tile, cellKey, now) {
+  const c = C.CELL[cellKey];
+  const a = anims.get(tile.id);
+  if (!a) return [c.x, c.y, 1];
+  if (now < a.t0 && !a.arc) return [a.fx, a.fy, a.alpha0 ?? 1];
+  const t = Math.max(0, Math.min(1, (now - a.t0) / a.dur));
+  if (t >= 1) { anims.delete(tile.id); return [c.x, c.y, 1]; }
+  if (a.arc) {
+    const { cx, cy, r, a0, a1 } = a.arc; const e = ease(t);
+    const ang = a0 + (a1 - a0) * e;
+    return [cx + r * Math.cos(ang), cy + r * Math.sin(ang), 1];
+  }
+  const e = a.bounce ? easeBounce(t) : ease(t);
+  return [a.fx + (c.x - a.fx) * e, a.fy + (c.y - a.fy) * e, 1];
+}
+
+// ---------- Drawing tiles ----------
+function shade(hex, amt) {
+  const n = parseInt(hex.slice(1), 16);
+  let r = (n >> 16) + amt, g = ((n >> 8) & 255) + amt, b = (n & 255) + amt;
+  r = Math.max(0, Math.min(255, r)); g = Math.max(0, Math.min(255, g)); b = Math.max(0, Math.min(255, b));
+  return `rgb(${r},${g},${b})`;
+}
+function symbol(c, x, y, r) {
+  ctx.fillStyle = 'rgba(40,18,0,.32)';
+  ctx.beginPath();
+  const k = r * 0.36;
+  switch (c) {
+    case 0: ctx.moveTo(x, y - k * 1.2); ctx.quadraticCurveTo(x + k, y, x, y + k); ctx.quadraticCurveTo(x - k, y, x, y - k * 1.2); break; // drop
+    case 1: ctx.arc(x, y, k * 0.8, 0, Math.PI * 2); break; // dot
+    case 2: ctx.ellipse(x, y, k * 1.05, k * 0.5, -Math.PI / 4, 0, Math.PI * 2); break; // leaf
+    case 3: ctx.moveTo(x, y - k); ctx.lineTo(x + k * .8, y); ctx.lineTo(x, y + k); ctx.lineTo(x - k * .8, y); break; // diamond
+    case 4: ctx.moveTo(x, y - k); ctx.lineTo(x + k, y + k * .75); ctx.lineTo(x - k, y + k * .75); break; // triangle
+    case 5: ctx.rect(x - k * .7, y - k * .7, k * 1.4, k * 1.4); break; // square
+  }
+  ctx.fill();
+}
+function drawTile(t, x, y, r, alpha) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  if (t.kind === 'wasp') {
+    hexPath(x, y, r); ctx.fillStyle = '#2b2116'; ctx.fill();
+    ctx.save(); hexPath(x, y, r); ctx.clip();
+    ctx.fillStyle = '#f1c232';
+    for (let i = -3; i <= 3; i++) { ctx.fillRect(x - r, y + i * r * 0.5 - r * 0.12, r * 2, r * 0.24); }
+    ctx.restore();
+    ctx.beginPath(); ctx.arc(x, y, r * 0.5, 0, Math.PI * 2); ctx.fillStyle = t.count <= 2 ? '#ef5f6f' : '#2b2116'; ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = `800 ${Math.round(r * 0.62)}px Figtree, system-ui, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(t.count, x, y + 1);
+    ctx.restore(); return;
+  }
+  const wild = C.isWild(st, t);
+  const col = C.COLOURS[t.c] ? C.COLOURS[t.c].hex : '#cccccc';
+  hexPath(x, y, r);
+  if (wild && t.kind !== 'queen') {
+    const g = ctx.createConicGradient ? ctx.createConicGradient(0, x, y) : null;
+    if (g) { ['#F5A623', '#EC5F7C', '#A57BE6', '#4D9DEB', '#3DC58B', '#C2D93A', '#F5A623'].forEach((h, i) => g.addColorStop(i / 6, h)); ctx.fillStyle = g; }
+    else ctx.fillStyle = '#ffffff';
+  } else {
+    const g = ctx.createLinearGradient(x, y - r, x, y + r);
+    g.addColorStop(0, shade(col, 30)); g.addColorStop(1, shade(col, -25));
+    ctx.fillStyle = g;
+  }
+  ctx.fill();
+  ctx.lineWidth = Math.max(1, r * 0.07); ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.stroke();
+  if (t.kind === 'n' && !(wild && t.kind !== 'queen')) symbol(t.c, x, y, r);
+  if (wild && t.kind === 'n') { ctx.beginPath(); ctx.arc(x, y, r * 0.32, 0, Math.PI * 2); ctx.lineWidth = r * 0.1; ctx.strokeStyle = '#fff'; ctx.stroke(); }
+  if (t.kind === 'comb') {
+    const ang = [Math.PI / 6, Math.PI / 2, -Math.PI / 6][t.axis];
+    ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+    ctx.fillStyle = 'rgba(255,255,255,.9)';
+    for (const o of [-1, 0, 1]) ctx.fillRect(-r * 0.62, o * r * 0.24 - r * 0.06, r * 1.24, r * 0.12);
+    ctx.restore();
+  }
+  if (t.kind === 'burst') {
+    ctx.fillStyle = 'rgba(255,255,255,.95)';
+    for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + Math.PI / 6; ctx.beginPath(); ctx.arc(x + Math.cos(a) * r * 0.45, y + Math.sin(a) * r * 0.45, r * 0.12, 0, Math.PI * 2); ctx.fill(); }
+    ctx.beginPath(); ctx.arc(x, y, r * 0.18, 0, Math.PI * 2); ctx.fill();
+  }
+  if (t.kind === 'queen') {
+    ctx.fillStyle = '#fff4cf'; ctx.strokeStyle = '#7a4a00'; ctx.lineWidth = r * 0.06;
+    const w = r * 0.62, h = r * 0.42;
+    ctx.beginPath(); ctx.moveTo(x - w, y + h * .6); ctx.lineTo(x - w, y - h * .4); ctx.lineTo(x - w * .5, y); ctx.lineTo(x, y - h * .9); ctx.lineTo(x + w * .5, y); ctx.lineTo(x + w, y - h * .4); ctx.lineTo(x + w, y + h * .6); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+  }
+  if (t.gold) { hexPath(x, y, r * 0.93); ctx.lineWidth = r * 0.14; ctx.strokeStyle = '#ffd86b'; ctx.stroke(); }
+  if (t.glass) {
+    ctx.save(); hexPath(x, y, r); ctx.clip();
+    ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.beginPath(); ctx.moveTo(x - r, y - r * .2); ctx.lineTo(x - r * .2, y - r); ctx.lineTo(x + r * .1, y - r); ctx.lineTo(x - r, y + r * .1); ctx.fill();
+    ctx.restore();
+    hexPath(x, y, r * 0.95); ctx.lineWidth = r * 0.08; ctx.strokeStyle = 'rgba(220,240,255,.9)'; ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// ---------- Render loop ----------
+function draw(now) {
+  requestAnimationFrame(draw);
+  ctx.setTransform(geo.dpr, 0, 0, geo.dpr, 0, 0);
+  ctx.clearRect(0, 0, geo.w, geo.h);
+  if (!st || !st.board) return;
+  let sx = 0, sy = 0;
+  if (now < shakeT) { sx = (Math.random() - .5) * 8; sy = (Math.random() - .5) * 8; }
+  ctx.save(); ctx.translate(sx, sy);
+  const s = geo.s;
+  // board backplate
+  ctx.save();
+  for (const c of C.CELLS) { const [x, y] = px(c.x, c.y); hexPath(x, y, s * 1.08); ctx.fillStyle = '#120a04'; ctx.fill(); }
+  for (const c of C.CELLS) { const [x, y] = px(c.x, c.y); hexPath(x, y, s * 0.97); ctx.fillStyle = '#3d2814'; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = '#5a3c1d'; ctx.stroke(); }
+  ctx.restore();
+  // clip new tiles above the board
+  const topY = geo.oy - C.SQ3 * (C.R + 0.5) * s;
+  // tiles
+  for (const c of C.CELLS) {
+    const t = st.board[c.key]; if (!t) continue;
+    const [bx, by, a0] = tilePos(t, c.key, now);
+    const [x, y] = px(bx, by);
+    let alpha = a0;
+    if (y < topY) alpha = Math.max(0, 1 - (topY - y) / (s * 1.5));
+    let r = s * 0.86;
+    const fl = flashes.find(f => f.key === c.key);
+    if (fl) { const ft = (now - fl.t0) / 400; if (ft < 1) r *= 1 + 0.25 * Math.sin(ft * Math.PI); }
+    drawTile(t, x, y, r, alpha);
+  }
+  flashes = flashes.filter(f => now - f.t0 < 400);
+  // dying tiles
+  dying = dying.filter(d => now - d.t0 < d.dur);
+  for (const d of dying) {
+    const t = (now - d.t0) / d.dur; const [x, y] = px(d.x, d.y);
+    drawTile(d.tile, x, y, s * 0.86 * (1 + 0.25 * t) * (1 - ease(t) * 0.9), 1 - t);
+  }
+  // selection
+  if (selected >= 0 && !busy) {
+    const trio = C.TRIOS[selected];
+    ctx.lineWidth = 3; ctx.strokeStyle = '#fff6dc';
+    for (const k of trio.keys) { const c = C.CELL[k]; const [x, y] = px(c.x, c.y); hexPath(x, y, s * 0.9); ctx.stroke(); }
+    const [jx, jy] = px(trio.x, trio.y);
+    ctx.beginPath(); ctx.arc(jx, jy, s * 0.16, 0, Math.PI * 2); ctx.fillStyle = '#fff6dc'; ctx.fill();
+    ctx.beginPath(); ctx.arc(jx, jy, s * 0.62, -2.4, 0.6); ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,246,220,.7)'; ctx.stroke();
+  }
+  // particles
+  particles = particles.filter(p => now - p.t0 < p.life);
+  for (const p of particles) {
+    const t = (now - p.t0) / p.life;
+    const [x, y] = px(p.x + p.vx * t, p.y + p.vy * t + 1.2 * t * t);
+    ctx.globalAlpha = 1 - t; hexPath(x, y, s * 0.16 * (1 - t * .5)); ctx.fillStyle = p.c; ctx.fill(); ctx.globalAlpha = 1;
+  }
+  // floaters
+  floaters = floaters.filter(f => now - f.t0 < 900);
+  for (const f of floaters) {
+    const t = (now - f.t0) / 900; const [x, y] = px(f.x, f.y - t * 1.2);
+    ctx.globalAlpha = 1 - t * t; ctx.font = `400 ${Math.round(s * 0.75)}px 'Bagel Fat One', sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 4; ctx.strokeStyle = '#1c120a'; ctx.strokeText(f.text, x, y);
+    ctx.fillStyle = f.c || '#fff6dc'; ctx.fillText(f.text, x, y); ctx.globalAlpha = 1;
+  }
+  ctx.restore();
+}
+requestAnimationFrame(draw);
+
+const wait = (ms) => new Promise(r => setTimeout(r, ms));
+
+function burstParticles(key, colour, n = 6) {
+  const c = C.CELL[key]; const now = performance.now();
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, sp = 0.6 + Math.random() * 1.1;
+    particles.push({ x: c.x, y: c.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 0.6, c: colour, t0: now, life: 500 + Math.random() * 300 });
+  }
+}
+
+// ---------- HUD ----------
+function renderHUD() {
+  if (!st || !st.round) return;
+  const rd = st.round;
+  $('where').innerHTML = `Field <b>${st.field}</b>/8 · ${C.ROUND_NAMES[st.roundIdx]}${st.boss ? ' · <b style="color:var(--mult)">' + st.boss.name + '</b>' : ''}`;
+  $('hearts').innerHTML = [0, 1, 2].map(i => `<span class="${i < st.hearts ? '' : 'lost'}">❤️</span>`).join('');
+  $('score').textContent = fmt(rd.score);
+  $('target').textContent = fmt(rd.target);
+  $('scoreFill').style.width = Math.min(100, rd.score / rd.target * 100) + '%';
+  $('moves').textContent = rd.moves;
+  $('movesBox').classList.toggle('low', rd.moves <= 3);
+  $('nectar').textContent = st.nectar;
+  const ch = $('charms'); ch.innerHTML = '';
+  for (let i = 0; i < 5; i++) {
+    const c = st.charms[i];
+    const b = document.createElement('button');
+    b.className = 'slot' + (c ? ' filled' : '');
+    b.id = 'charm' + i;
+    b.setAttribute('aria-label', c ? c.name : 'Empty charm slot');
+    if (c) {
+      b.innerHTML = c.icon + (c.id === 'old_beekeeper' && c.counter ? `<span class="cnt">+${c.counter}</span>` : '');
+      b.onclick = () => info(`${c.icon} <b>${c.name}</b> · ${c.desc}`);
+    } else b.onclick = () => info('Empty charm slot. Buy charms in the shop between rounds.');
+    ch.appendChild(b);
+  }
+  for (let i = 0; i < 2; i++) {
+    const s = st.seeds[i], b = $('seed' + i);
+    b.className = 'slot seed' + (s ? ' filled' : '') + (armedSeed === i ? ' armed' : '');
+    b.textContent = s ? s.icon : '';
+    b.setAttribute('aria-label', s ? s.name : 'Empty seed slot');
+  }
+  const gale = st.boss && st.boss.id === 'gale';
+  $('ccw').disabled = gale;
+}
+function info(html, useLabel, onUse) {
+  const el = $('info');
+  el.innerHTML = `<span>${html}</span>`;
+  if (useLabel) { const b = document.createElement('button'); b.className = 'use'; b.textContent = useLabel; b.onclick = onUse; el.appendChild(b); }
+}
+function defaultInfo() {
+  if (armedSeed >= 0) return;
+  if (st.boss) info(`<b>${st.boss.name}:</b> ${st.boss.rule}`);
+  else info(selected >= 0 ? 'Swipe round, tap again, or use the buttons to turn.' : 'Tap where three cells meet, then turn them.');
+}
+let toastT = 0;
+function toast(text) {
+  const el = $('toast'); el.textContent = text; el.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), 1800);
+}
+let bannerT = 0;
+function banner(html, ms = 1100) {
+  const el = $('banner'); el.innerHTML = html; el.classList.add('show');
+  clearTimeout(bannerT); bannerT = setTimeout(() => el.classList.remove('show'), ms);
+}
+function showTally(res) {
+  $('tPollen').textContent = fmt(res.pollen);
+  $('tMult').textContent = Number.isInteger(res.mult) ? res.mult : res.mult.toFixed(1);
+  const x = $('tX'); x.hidden = res.xmult === 1; x.textContent = '×' + res.xmult;
+  $('tStep').textContent = res.step > 1 ? `cascade ${res.step}` : '';
+  $('tally').classList.add('show');
+}
+
+// ---------- Input ----------
+function toBoard(e) {
+  const r = cv.getBoundingClientRect();
+  return [(e.clientX - r.left - geo.ox) / geo.s, (e.clientY - r.top - geo.oy) / geo.s];
+}
+function nearestTrio(bx, by) {
+  let best = -1, bd = 1e9;
+  C.TRIOS.forEach((t, i) => { const d = (t.x - bx) ** 2 + (t.y - by) ** 2; if (d < bd) { bd = d; best = i; } });
+  return bd < 1.1 ? best : -1;
+}
+function nearestCell(bx, by) {
+  let best = null, bd = 1e9;
+  for (const c of C.CELLS) { const d = (c.x - bx) ** 2 + (c.y - by) ** 2; if (d < bd) { bd = d; best = c.key; } }
+  return bd < 1 ? best : null;
+}
+let down = null;
+cv.addEventListener('pointerdown', (e) => { audio(); down = { x: e.clientX, y: e.clientY, b: toBoard(e) }; cv.setPointerCapture(e.pointerId); });
+cv.addEventListener('pointerup', (e) => {
+  if (!down || !st || !st.round || busy) { down = null; return; }
+  const dx = e.clientX - down.x, dy = e.clientY - down.y, dist = Math.hypot(dx, dy);
+  const [bx, by] = down.b; down = null;
+  if (armedSeed >= 0) { const k = nearestCell(bx, by); if (k) useSeedAt(armedSeed, k); return; }
+  if (dist < 14) {
+    const t = nearestTrio(bx, by);
+    if (t < 0) { selected = -1; defaultInfo(); return; }
+    if (t === selected) { rotateSel(1); return; }
+    selected = t; sfx.click(); defaultInfo();
+  } else {
+    const t = nearestTrio(bx, by); if (t < 0) return;
+    selected = t;
+    const trio = C.TRIOS[t];
+    const [jx, jy] = px(trio.x, trio.y);
+    const r = cv.getBoundingClientRect();
+    const vx = (e.clientX - dx - r.left) - jx, vy = (e.clientY - dy - r.top) - jy;
+    let cross = vx * dy - vy * dx;
+    if (Math.hypot(vx, vy) < geo.s * 0.15) cross = dx;
+    rotateSel(cross > 0 ? 1 : -1);
+  }
+});
+cv.addEventListener('wheel', (e) => { e.preventDefault(); if (selected >= 0) rotateSel(e.deltaY > 0 ? 1 : -1); }, { passive: false });
+window.addEventListener('keydown', (e) => {
+  if ($('screen').hidden === false) return;
+  if (e.key === 'e' || e.key === 'E' || e.key === 'ArrowRight') rotateSel(1);
+  if (e.key === 'q' || e.key === 'Q' || e.key === 'ArrowLeft') rotateSel(-1);
+});
+$('cw').onclick = () => rotateSel(1);
+$('ccw').onclick = () => rotateSel(-1);
+$('seed0').onclick = () => seedTap(0);
+$('seed1').onclick = () => seedTap(1);
+
+function rotateSel(dir) {
+  if (busy || !st || !st.round) return;
+  if (selected < 0) { toast('Tap where three cells meet first'); return; }
+  if (dir < 0 && st.boss && st.boss.id === 'gale') { toast('The Gale: clockwise only'); return; }
+  playMove(selected, dir);
+}
+
+// ---------- Seeds ----------
+function seedTap(i) {
+  if (busy || !st || !st.round) return;
+  const s = st.seeds[i];
+  if (!s) { info('Empty seed slot. Seeds are one-use helpers from the shop.'); return; }
+  if (armedSeed === i) { armedSeed = -1; renderHUD(); defaultInfo(); return; }
+  armedSeed = -1;
+  info(`${s.icon} <b>${s.name}</b> · ${s.desc}`, s.target ? 'Pick a tile' : 'Use', () => {
+    if (s.target) { armedSeed = i; renderHUD(); info(`${s.icon} Tap a tile to use <b>${s.name}</b>. Tap the seed again to cancel.`); }
+    else useSeedAt(i, null);
+  });
+}
+async function useSeedAt(i, key) {
+  if (busy) return;
+  const before = {};
+  for (const c of C.CELLS) { const t = st.board[c.key]; if (t) before[t.id] = c.key; }
+  const res = C.useSeed(st, i, key);
+  armedSeed = -1;
+  if (!res) { toast('That tile can’t be used'); renderHUD(); defaultInfo(); return; }
+  busy = true; sfx.coin();
+  if (res.cleared) for (const cl of res.cleared) { const c = C.CELL[cl.key]; dying.push({ tile: cl.tile, x: c.x, y: c.y, t0: performance.now(), dur: dur(260) }); burstParticles(cl.key, '#fff'); }
+  if (res.key) flashes.push({ key: res.key, t0: performance.now() });
+  if (res.moves) { applyFall(res.moves, res.id === 'sunflower' ? 0 : dur(200)); await wait(dur(520)); }
+  renderHUD();
+  if (res.id === 'thistle' || res.id === 'dandelion' || res.id === 'sunflower') await cascade(1, []);
+  await afterSettle(false);
+  busy = false; defaultInfo(); renderHUD();
+}
+
+// ---------- Move flow ----------
+function applyFall(moves, delay) {
+  const now = performance.now();
+  const spawnCount = {};
+  for (const m of moves) if (m.from === null) spawnCount[m.col] = (spawnCount[m.col] || 0) + 1;
+  for (const m of moves) {
+    const to = C.CELL[m.to];
+    let fx, fy;
+    if (m.from) { fx = C.CELL[m.from].x; fy = C.CELL[m.from].y; }
+    else { const top = C.CELL[C.COLUMNS[m.col][0]]; fx = top.x; fy = top.y - C.SQ3 * (spawnCount[m.col] - (m.spawnRank - 1)) ; }
+    const distance = Math.abs(to.y - fy);
+    anims.set(m.tile.id, { fx, fy, t0: now + delay, dur: dur(170 + distance * 45), bounce: distance > 1.8 });
+  }
+}
+
+async function cascade(stepStart, pivotKeys) {
+  let step = stepStart, res;
+  while ((res = C.resolveStep(st, step, pivotKeys, st.round.moves === 0))) {
+    const now = performance.now();
+    showTally(res);
+    sfx.clear(step); buzz(12);
+    for (const cl of res.clearedTiles) {
+      const c = C.CELL[cl.key];
+      dying.push({ tile: cl.tile, x: c.x, y: c.y, t0: now, dur: dur(260) });
+      burstParticles(cl.key, cl.tile.kind === 'wasp' ? '#f1c232' : (C.COLOURS[cl.tile.c] || {}).hex || '#fff', 4);
+      if (cl.tile.gold) floaters.push({ x: c.x, y: c.y, text: '+' + (C.has(st, 'sweet_tooth') ? 2 : 1), c: '#ffd86b', t0: now });
+    }
+    if (res.triggered.length) { sfx.special(); shakeT = now + dur(200); }
+    for (const cr of res.created) flashes.push({ key: cr.key, t0: now + dur(260) });
+    const centre = res.clearedTiles.reduce((a, cl) => [a[0] + C.CELL[cl.key].x, a[1] + C.CELL[cl.key].y], [0, 0]).map(v => v / Math.max(1, res.clearedTiles.length));
+    floaters.push({ x: centre[0], y: centre[1], text: '+' + fmt(res.score), t0: now });
+    if (res.jellyBlast) banner('<span style="font-size:22px">Royal jelly!</span><br>×2 for the rest of the round', 1600);
+    else if (res.created.some(c => c.tile.kind === 'queen')) banner('A queen is born');
+    applyFall(res.moves, dur(240));
+    renderHUD();
+    st.stats.bestStep = Math.max(st.stats.bestStep, step);
+    await wait(dur(240 + 420));
+    step++; pivotKeys = [];
+    if (step > 60) break;
+  }
+  setTimeout(() => $('tally').classList.remove('show'), 500);
+  return step - stepStart;
+}
+
+async function afterSettle(countMove) {
+  if (countMove) {
+    const ev = C.endMove(st);
+    if (ev.stung.length) {
+      sfx.sting(); buzz([60, 40, 60]); shakeT = performance.now() + dur(350);
+      $('app').classList.remove('shake'); void $('app').offsetWidth; $('app').classList.add('shake');
+      banner(`Stung! −1 hive health`, 1000);
+      for (const k of ev.stung) flashes.push({ key: k, t0: performance.now() });
+      await wait(dur(500));
+    }
+    if (ev.spawned) { sfx.buzz(); flashes.push({ key: ev.spawned, t0: performance.now() }); toast('A wasp nest appeared. Match next to it to clear it.'); }
+  }
+  renderHUD();
+  const status = C.roundStatus(st);
+  if (status === 'playing' && !C.hasMove(st, st.board)) {
+    banner('No moves left. The hive shakes!', 1200);
+    await wait(dur(500));
+    const mv = C.shuffleBoard(st);
+    applyFall(mv.map(m => ({ tile: m.tile, from: m.from, to: m.to })), 0);
+    await wait(dur(700));
+  }
+  return status;
+}
+
+async function playMove(trioIdx, dir) {
+  busy = true;
+  const trio = C.TRIOS[trioIdx];
+  const now = performance.now();
+  // rotation arc animation
+  for (const k of trio.keys) {
+    const t = st.board[k]; if (!t) continue;
+    const c = C.CELL[k];
+    const a0 = Math.atan2(c.y - trio.y, c.x - trio.x);
+    anims.set(t.id, { arc: { cx: trio.x, cy: trio.y, r: Math.hypot(c.x - trio.x, c.y - trio.y), a0, a1: a0 + dir * 2 * Math.PI / 3 }, t0: now, dur: dur(170) });
+  }
+  const r = C.doRotate(st, trioIdx, dir);
+  if (r && r.free) toast('Reverse Spin: free rotation');
+  sfx.turn(); renderHUD();
+  await wait(dur(190));
+  await cascade(1, trio.keys.slice());
+  const status = await afterSettle(true);
+  busy = false;
+  if (status === 'won') { selected = -1; await wait(dur(300)); roundWon(); }
+  else if (status === 'lost') { selected = -1; await wait(dur(400)); runOver(); }
+  else defaultInfo();
+}
+
+// ---------- Screens ----------
+function showScreen(html, setup) {
+  $('screenCard').innerHTML = html; $('screen').hidden = false; $('screen').scrollTop = 0;
+  if (setup) setup();
+}
+function hideScreen() { $('screen').hidden = true; }
+
+function titleScreen() {
+  st = null; $('app').style.visibility = 'hidden';
+  const best = store.get('best', null);
+  showScreen(`
+    <svg class="title-hex" viewBox="0 0 160 120" aria-hidden="true">
+      ${[[50, 40, '#F5A623'], [80, 23, '#EC5F7C'], [110, 40, '#3DC58B'], [50, 74, '#4D9DEB'], [80, 57, '#f3dfb5'], [110, 74, '#A57BE6'], [80, 91, '#F5A623']].map(([x, y, c]) => {
+        const pts = [0, 1, 2, 3, 4, 5].map(i => `${x + 19 * Math.cos(i * Math.PI / 3)},${y + 19 * Math.sin(i * Math.PI / 3)}`).join(' ');
+        return `<polygon points="${pts}" fill="${c}" stroke="#1c120a" stroke-width="3"/>`; }).join('')}
+    </svg>
+    <div class="wordmark">Honeyspin</div>
+    <div class="byline">by Samderverse</div>
+    <p style="text-align:center;color:var(--muted)">Spin the comb, match the pollen, survive eight fields.</p>
+    <button class="btn" id="newRun">New run</button>
+    <button class="btn ghost" id="howBtn">How to play</button>
+    <div class="toggles">
+      <button class="toggle" id="sndT">Sound: ${settings.sound ? 'on' : 'off'}</button>
+      <button class="toggle" id="spdT">Speed: ${settings.speed}×</button>
+    </div>
+    ${best ? `<div class="fine">Best run: reached field ${best.field}${best.won ? ' and won' : ''} · best round ${fmt(best.score || 0)}</div>` : ''}
+    <div class="fine">v1 test build</div>
+  `, () => {
+    $('newRun').onclick = () => { audio(); startRun(); };
+    $('howBtn').onclick = () => howTo(titleScreen);
+    bindToggles(titleScreen);
+  });
+}
+function bindToggles(back) {
+  $('sndT').onclick = () => { settings.sound = !settings.sound; store.set('settings', settings); if (settings.sound) sfx.click(); back(); };
+  $('spdT').onclick = () => { settings.speed = SPEEDS[(SPEEDS.indexOf(settings.speed) + 1) % SPEEDS.length]; store.set('settings', settings); back(); };
+}
+function howTo(back) {
+  const sw = (c) => `<span class="dot" style="background:${C.COLOURS[c].hex}"></span>`;
+  showScreen(`
+    <h2>How to play</h2>
+    <div class="howto"><ol>
+      <li><b>Tap where three cells meet.</b> Then swipe round, tap the same spot again, or use ↺ ↻ to turn them.</li>
+      <li><b>Make triangles.</b> Three touching cells of one colour clear. Touching triangles join into bigger groups.</li>
+      <li><b>Every turn costs a move.</b> Reach the target score before your moves run out.</li>
+      <li><b>Score = pollen × mult.</b> Each cascade step adds mult, so chain reactions pay off.</li>
+      <li><b>Spend nectar in the shop</b> on charms (rule-benders), seeds (one-use helpers) and tiles for your bag.</li>
+    </ol></div>
+    <h3>Special tiles</h3>
+    <div class="legend">
+      <div>${sw(3)} <b>Comb</b> (group of 4): clears a whole line when cleared.</div>
+      <div>${sw(1)} <b>Pollen burst</b> (group of 5+): clears everything around it.</div>
+      <div>${sw(0)} <b>Queen</b> (ring of 6 round one cell): wild, and clears every tile of its colour.</div>
+      <div>${sw(4)} <b>Royal jelly</b>: three queens touching clear the board and double your score.</div>
+      <div>🐝 <b>Wasp nest</b>: counts down each move. At 0 it stings for 1 heart. Match next to it to clear it.</div>
+    </div>
+    <p class="fine">Lose all three hearts or miss a target and the run ends. Beat a boss to win a heart back.</p>
+    <button class="btn" id="backBtn">Got it</button>
+  `, () => { $('backBtn').onclick = back; });
+}
+
+function startRun() {
+  st = C.newRun();
+  $('app').style.visibility = 'visible';
+  roundIntro();
+}
+
+function roundIntro() {
+  const names = C.ROUND_NAMES;
+  const base = (i) => { const save = st.roundIdx; st.roundIdx = i; const t = C.target(st); st.roundIdx = save; return t; };
+  const moves = [20, 20, 18].map(m => m + (C.has(st, 'worker_wings') ? 3 : 0));
+  const reward = [3, 4, 5];
+  showScreen(`
+    <h3 style="text-align:center">Field ${st.field} of 8</h3>
+    <h2>${names[st.roundIdx]}</h2>
+    <div class="rounds">
+      ${[0, 1, 2].map(i => `<div class="rcard ${i === st.roundIdx ? 'now' : i < st.roundIdx ? 'done' : ''}">
+        <div class="nm">${names[i]}</div><div class="tg num">${fmt(base(i))}</div>
+        <div class="sm">${moves[i]} moves · +${reward[i]} 🍯</div></div>`).join('')}
+    </div>
+    ${st.roundIdx === 2 ? '<div class="boss" id="bossInfo">The boss is revealed when the round starts.</div>' : ''}
+    ${st.field >= 4 && st.field === 4 && st.roundIdx === 0 ? '<p class="fine">A sixth colour, lime, joins the hive from here.</p>' : ''}
+    <button class="btn" id="playBtn">Play</button>
+  `, () => { $('playBtn').onclick = () => { hideScreen(); beginRound(); }; });
+}
+
+async function beginRound() {
+  anims.clear(); dying = []; particles = []; selected = -1; armedSeed = -1;
+  C.startRound(st);
+  renderHUD();
+  // drop-in animation
+  const now = performance.now();
+  for (const c of C.CELLS) { const t = st.board[c.key]; if (t) anims.set(t.id, { fx: c.x, fy: c.y - 9, t0: now + (c.x + 7) * 18, dur: dur(420), bounce: true, alpha0: 0 }); }
+  defaultInfo();
+  if (st.boss) {
+    let rule = st.boss.rule;
+    if (st.boss.id === 'drought') rule = `${C.COLOURS[st.droughtColour].name} scores no pollen`;
+    st.boss = Object.assign({}, st.boss, { rule });
+    banner(`<span style="color:var(--mult);font-size:20px">${st.boss.name}</span><br>${rule}`, 2200);
+    defaultInfo();
+  }
+  busy = true; await wait(600); busy = false;
+}
+
+function roundWon() {
+  sfx.win(); buzz(30);
+  const wasBoss = st.roundIdx === 2;
+  const rd = st.round;
+  const before = st.nectar;
+  const sum = C.finishRound(st);
+  const best = store.get('best', { field: 0, score: 0 });
+  store.set('best', { field: Math.max(best.field, st.won ? 8 : st.field), score: Math.max(best.score || 0, rd.score), won: best.won || st.won });
+  if (st.won) { runWon(); return; }
+  showScreen(`
+    <h2>Round cleared!</h2>
+    <p style="text-align:center"><span class="num" style="font-family:var(--font-display);font-size:30px">${fmt(sum.score)}</span> <span style="color:var(--muted)">/ ${fmt(sum.target)}</span></p>
+    <div class="tallylist num">
+      <div><span>Round reward</span><span>+${sum.reward}</span></div>
+      <div><span>Unused moves (max 5)</span><span>+${sum.unused}</span></div>
+      <div><span>Interest (1 per 5 held, max 5)</span><span>+${sum.interest}</span></div>
+      ${sum.gold ? `<div><span>Gold tiles this round</span><span>+${sum.gold} (already banked)</span></div>` : ''}
+      ${wasBoss ? `<div><span>Boss beaten</span><span>+1 heart (max 3)</span></div>` : ''}
+      <div class="tot"><span>Nectar</span><span>🍯 ${st.nectar}</span></div>
+    </div>
+    <button class="btn" id="shopBtn">Visit the shop</button>
+  `, () => { $('shopBtn').onclick = () => { C.openShop(st); shopScreen(); }; });
+}
+
+function shopScreen() {
+  const sh = st.shop;
+  const bagCounts = {}; let gold = 0, glass = 0, wild = 0;
+  for (const b of st.bag) { bagCounts[b.c] = (bagCounts[b.c] || 0) + 1; if (b.gold) gold++; if (b.glass) glass++; if (b.wild) wild++; }
+  showScreen(`
+    <div class="shop-head"><h2 style="text-align:left">The shop</h2><div class="wallet num">🍯 ${st.nectar}</div></div>
+    <div class="items">
+      ${sh.items.map((it, i) => {
+        const nm = it.type === 'charm' ? it.charm.name : it.type === 'seed' ? it.seed.name : it.name;
+        const ic = it.type === 'charm' ? it.charm.icon : it.type === 'seed' ? it.seed.icon : it.icon;
+        const ds = it.type === 'charm' ? it.charm.desc : it.type === 'seed' ? it.seed.desc : it.desc;
+        const rar = it.type === 'charm' ? it.charm.rarity : it.type === 'seed' ? 'Seed' : 'Bag';
+        return `<div class="item ${it.sold ? 'sold' : ''}"><div class="ic">${ic}</div><div class="rar ${rar}">${rar}</div><div class="nm">${nm}</div><div class="ds">${ds}</div>
+          <button class="buy" data-i="${i}" ${it.sold || st.nectar < it.price ? 'disabled' : ''}>${it.sold ? 'Bought' : 'Buy · ' + it.price + ' 🍯'}</button></div>`;
+      }).join('')}
+    </div>
+    <div class="row"><button class="btn ghost" id="rerollBtn" ${st.nectar < sh.rerollCost ? 'disabled' : ''}>Reroll · ${sh.rerollCost} 🍯</button></div>
+    <h3>Your charms (${st.charms.length}/5)</h3>
+    <div class="owned">${st.charms.length ? st.charms.map((c, i) => `<div class="owned-row"><span style="font-size:20px">${c.icon}</span><span><b>${c.name}</b> · <span style="color:var(--muted)">${c.desc}</span></span><button class="sell" data-s="${i}">Sell ${Math.floor(c.price / 2)}</button></div>`).join('') : '<div class="fine" style="text-align:left">None yet.</div>'}</div>
+    <h3>Your seeds (${st.seeds.length}/2)</h3>
+    <div class="owned">${st.seeds.length ? st.seeds.map(s => `<div class="owned-row"><span style="font-size:20px">${s.icon}</span><span><b>${s.name}</b> · <span style="color:var(--muted)">${s.desc}</span></span></div>`).join('') : '<div class="fine" style="text-align:left">None yet.</div>'}</div>
+    <h3>Your tile bag (${st.bag.length})</h3>
+    <div class="bag num">${Object.keys(bagCounts).sort().map(c => `<span><span class="dot" style="background:${C.COLOURS[c].hex}"></span>${bagCounts[c]}</span>`).join('')}
+      ${gold ? `<span>✨ ${gold} gold</span>` : ''}${glass ? `<span>🔮 ${glass} glass</span>` : ''}${wild ? `<span>🌈 ${wild} wild</span>` : ''}</div>
+    <button class="btn" id="nextBtn">Next round</button>
+  `, () => {
+    document.querySelectorAll('.buy').forEach(b => b.onclick = () => {
+      const r = C.buy(st, +b.dataset.i);
+      if (r === 'ok') { sfx.coin(); shopScreen(); }
+      else toast(r === 'slots' ? 'No free slot. Sell one first.' : 'Not enough nectar');
+    });
+    document.querySelectorAll('.sell').forEach(b => b.onclick = () => { C.sellCharm(st, +b.dataset.s); sfx.coin(); shopScreen(); });
+    $('rerollBtn').onclick = () => { if (C.reroll(st)) { sfx.click(); shopScreen(); } };
+    $('nextBtn').onclick = () => { st.shop = null; renderHUD(); roundIntro(); };
+  });
+}
+
+function runOver() {
+  sfx.lose(); buzz([80, 60, 120]);
+  const why = st.hearts <= 0 ? 'The wasps took your last heart.' : `You needed ${fmt(st.round.target)} and scored ${fmt(st.round.score)}.`;
+  const best = store.get('best', { field: 0, score: 0 });
+  store.set('best', { field: Math.max(best.field, st.field), score: Math.max(best.score || 0, st.round.score), won: best.won });
+  showScreen(`
+    <h2>Run over</h2>
+    <p style="text-align:center">${why}</p>
+    <div class="tallylist num">
+      <div><span>Reached</span><span>Field ${st.field} · ${C.ROUND_NAMES[st.roundIdx]}</span></div>
+      <div><span>Rounds cleared</span><span>${st.stats.rounds}</span></div>
+      <div><span>Longest cascade</span><span>${st.stats.bestStep} steps</span></div>
+      <div><span>Charms</span><span>${st.charms.map(c => c.icon).join(' ') || 'none'}</span></div>
+    </div>
+    <button class="btn" id="againBtn">New run</button>
+    <button class="btn ghost" id="titleBtn">Title screen</button>
+  `, () => { $('againBtn').onclick = startRun; $('titleBtn').onclick = titleScreen; });
+}
+function runWon() {
+  showScreen(`
+    <div class="wordmark" style="font-size:54px">Hive saved!</div>
+    <p style="text-align:center">You beat all eight fields.</p>
+    <div class="tallylist num">
+      <div><span>Rounds cleared</span><span>${st.stats.rounds}</span></div>
+      <div><span>Longest cascade</span><span>${st.stats.bestStep} steps</span></div>
+      <div><span>Hearts left</span><span>${st.hearts}</span></div>
+      <div><span>Charms</span><span>${st.charms.map(c => c.icon).join(' ')}</span></div>
+    </div>
+    <button class="btn" id="againBtn">New run</button>
+    <button class="btn ghost" id="titleBtn">Title screen</button>
+  `, () => { $('againBtn').onclick = startRun; $('titleBtn').onclick = titleScreen; });
+}
+function menu() {
+  if (busy) return;
+  showScreen(`
+    <h2>Paused</h2>
+    <button class="btn" id="resumeBtn">Resume</button>
+    <button class="btn ghost" id="howBtn">How to play</button>
+    <div class="toggles">
+      <button class="toggle" id="sndT">Sound: ${settings.sound ? 'on' : 'off'}</button>
+      <button class="toggle" id="spdT">Speed: ${settings.speed}×</button>
+    </div>
+    <button class="btn ghost" id="quitBtn">Abandon run</button>
+  `, () => {
+    $('resumeBtn').onclick = hideScreen;
+    $('howBtn').onclick = () => howTo(menu);
+    bindToggles(menu);
+    $('quitBtn').onclick = () => {
+      $('quitBtn').textContent = 'Tap again to abandon'; $('quitBtn').onclick = titleScreen;
+    };
+  });
+}
+$('menuBtn').onclick = menu;
+// debug hook for testing in the browser console
+window.Honeyspin = { get state() { return st; }, playMove, give(n) { st.nectar += n; renderHUD(); } };
+
+titleScreen();
+})();
+</script>
+
+</body>
+</html>
