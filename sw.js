@@ -1,6 +1,7 @@
 // Hive Mind offline cache. Bump VERSION when you upload a new build.
-const VERSION = 'hivemind-v1.1';
-const SHELL = ['./', './index.html', './manifest.json', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png', './icons/favicon-32.png'];
+const VERSION = 'hivemind-v1.2';
+const SHELL = ['./', './index.html', './manifest.json', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png', './icons/favicon-32.png',
+  './audio/sfx/button-click.mp3', './audio/sfx/button-tick-b.mp3', './audio/sfx/button-tick.mp3', './audio/sfx/chime-a.mp3', './audio/sfx/chime-b.mp3', './audio/sfx/chime-c.mp3', './audio/sfx/coin-cascade.mp3', './audio/sfx/coin-ding.mp3', './audio/sfx/ding.mp3', './audio/sfx/game-over.mp3', './audio/sfx/glass-smash.mp3', './audio/sfx/rattle.mp3', './audio/sfx/thump-a.mp3', './audio/sfx/thump-b.mp3', './audio/sfx/win-bell-short.mp3', './audio/sfx/win-bell.mp3', './audio/theme.mp3'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
