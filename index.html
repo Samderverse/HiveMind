@@ -69,7 +69,11 @@ button:focus-visible { outline: 3px solid var(--honey); outline-offset: 2px; }
 .hud-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .hud-top > :first-child { min-width: 0; }
 #bgfx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
-.where { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 800; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.pips { display: inline-flex; gap: 4px; margin: 0 8px 0 6px; vertical-align: 1px; }
+.pips i { width: 10px; height: 10px; clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0% 50%); background: #ffffff2e; }
+.pips i.done { background: var(--good); } .pips i.now { background: var(--honey); }
+.pips i.boss { background: #7a2230; } .pips i.boss.now { background: var(--mult); }
+.where { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 800; color: #e8d3ad !important; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 .where b { color: var(--ink); }
 .hearts { font-size: 18px; letter-spacing: 2px; }
 .hearts .lost { opacity: .22; filter: grayscale(1); }
@@ -87,7 +91,9 @@ button:focus-visible { outline: 3px solid var(--honey); outline-offset: 2px; }
 .stat .big { font-size: 22px; }
 .moves.low .big { color: var(--danger); }
 .nectar .big { color: var(--honey); }
-.charms { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.charms { display: grid; grid-template-columns: repeat(var(--slots, 5), minmax(0, 1fr)); gap: 6px; }
+.slot .lv { position: absolute; left: 50%; bottom: 3px; transform: translateX(-50%); display: flex; gap: 3px; }
+.slot .lv i { width: 5px; height: 5px; border-radius: 50%; background: var(--honey); }
 .slot {
   height: 42px; border-radius: 10px; border: 1px dashed #ffffff22; background: #00000022;
   display: grid; place-items: center; font-size: 22px; position: relative;
@@ -98,7 +104,7 @@ button:focus-visible { outline: 3px solid var(--honey); outline-offset: 2px; }
 @keyframes pulse { 40% { transform: scale(1.15); background: #f5a62355; } }
 
 /* ---------- Board ---------- */
-.board-wrap { flex: 1; min-height: 0; position: relative; }
+.board-wrap { flex: 1; min-height: 0; position: relative; margin-inline: -8px; }
 canvas#board { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
 .tally {
   position: absolute; left: 50%; top: 6px; transform: translateX(-50%);
@@ -127,14 +133,18 @@ canvas#board { position: absolute; inset: 0; width: 100%; height: 100%; touch-ac
 }
 .info b { color: var(--ink); }
 .info .use { margin-left: auto; background: var(--honey); color: #2a1600; border: 0; border-radius: 8px; padding: 6px 12px; font-weight: 800; }
-.controls { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; }
+.tray { display: flex; gap: 8px; align-items: stretch; min-height: 48px; }
+.tray .info { flex: 1; min-width: 0; transition: opacity .35s; }
+.info.quiet { opacity: 0; }
+.tray .seed { flex: none; width: 52px; height: 48px; font-size: 22px; }
+.controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .rot {
-  height: 56px; border-radius: 14px; border: 0; background: var(--honey); color: #2a1600;
+  height: 54px; border-radius: 14px; border: 0; background: var(--honey); color: #2a1600;
   font-size: 28px; font-weight: 800; box-shadow: 0 4px 0 var(--honey-deep);
 }
 .rot:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--honey-deep); }
 .rot:disabled { opacity: .35; }
-.seed { height: 56px; font-size: 24px; }
+.seed { font-size: 22px; }
 .seed.armed { outline: 3px solid var(--good); }
 
 /* ---------- Screens ---------- */
@@ -205,6 +215,33 @@ p { margin: 0; line-height: 1.5; }
 }
 .toast.show { opacity: 1; }
 .shake { animation: shake .35s; }
+#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
+.nectar { position: relative; }
+.npop { position: absolute; right: 8px; top: -4px; font-family: var(--font-display); font-size: 17px; color: var(--honey); pointer-events: none; animation: npop 1s ease-out forwards; }
+.npop.neg { color: var(--mult); }
+@keyframes npop { from { opacity: 0; transform: translateY(8px); } 20% { opacity: 1; } to { opacity: 0; transform: translateY(-20px); } }
+.score-box { transition: box-shadow .3s; }
+.score-box.met { box-shadow: 0 0 0 2px var(--good), 0 0 18px #5fcf8f66; }
+.score-box.met .fill { background: linear-gradient(90deg, #5fcf8f33, #5fcf8f70); }
+.score-box.flash { animation: metflash .7s ease; }
+@keyframes metflash { 30% { transform: scale(1.04); } }
+.tallylist.anim > div { animation: rowin .35s both; animation-delay: calc(var(--r) * 140ms); }
+@keyframes rowin { from { opacity: 0; transform: translateX(-10px); } }
+.pop { position: fixed; z-index: 16; width: min(270px, calc(100vw - 32px)); background: #3a2614; border: 1px solid #f5a62377; border-radius: 12px; padding: 10px 12px; box-shadow: 0 10px 30px #000a; font-size: 13.5px; line-height: 1.4; display: grid; gap: 4px; }
+.pop .pn { font-weight: 800; font-size: 15px; display: flex; gap: 8px; align-items: center; }
+.pop .pl { display: flex; gap: 4px; align-items: center; color: var(--muted); font-size: 12px; }
+.pop .pl i { width: 7px; height: 7px; border-radius: 50%; background: #ffffff2e; } .pop .pl i.on { background: var(--honey); }
+.boss-card { position: fixed; inset: 0; z-index: 18; display: grid; place-items: center; pointer-events: none; background: radial-gradient(circle at 50% 45%, #5a0f1699, #12020400 70%); }
+.boss-card .inner { text-align: center; display: grid; gap: 6px; padding: 0 24px; animation: slam .6s cubic-bezier(.2, 1.4, .3, 1) both; }
+.boss-card .k { text-transform: uppercase; font-weight: 800; letter-spacing: .3em; color: #ffb3ba; font-size: 13px; }
+.boss-card .n { font-family: var(--font-display); font-size: clamp(44px, 13vw, 66px); line-height: 1; color: #ff5a6a; text-shadow: 0 4px 0 #3a0710, 0 0 34px #ff3b4f99; }
+.boss-card .r { color: #ffe1e4; font-weight: 600; max-width: 320px; margin: 0 auto; }
+.boss-card.out .inner { animation: cardout .35s ease-in forwards; }
+@keyframes slam { from { opacity: 0; transform: scale(1.9); } 60% { opacity: 1; transform: scale(.95); } to { transform: scale(1); } }
+@keyframes cardout { to { opacity: 0; transform: scale(.85); } }
+.hud.glitch { animation: glitch .2s steps(2) 1; }
+@keyframes glitch { 0% { transform: translate(3px, -1px) skewX(8deg); filter: hue-rotate(90deg) saturate(2); } 50% { transform: translate(-4px, 1px); filter: hue-rotate(-60deg); } 100% { transform: none; } }
+#board.parched { filter: saturate(.72) sepia(.18) brightness(1.04); }
 @keyframes shake { 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(3px); } }
 .logo { display: block; margin: 0 auto; width: 150px; height: 150px; }
 .logo-ring { transform-origin: 75px 75px; animation: spin 24s linear infinite; }
@@ -281,7 +318,17 @@ h2.left { text-align: left; }
 .credits div { background: var(--panel); border-radius: 12px; padding: 10px 14px; }
 .credits dt { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 .credits dd { margin: 2px 0 0; line-height: 1.45; }
-@media (prefers-reduced-motion: reduce) { .shake, .slot.pulse, .logo-ring, .deal .ware { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .shake, .slot.pulse, .logo-ring, .deal .ware, .hud.glitch, .boss-card .inner, .tallylist.anim > div { animation: none; } }
+.services { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.svc { display: grid; gap: 4px; text-align: left; background: #2a1b0e; border: 1px solid #ffffff1c; border-radius: 12px; padding: 10px; }
+.svc b { font-size: 14.5px; } .svc small { color: var(--muted); font-size: 12px; line-height: 1.3; }
+.svc .buy { margin-top: 4px; border: 0; border-radius: 9px; padding: 7px; font-weight: 800; background: var(--honey); color: #2a1600; }
+.svc .buy:disabled { background: #3a2614; color: var(--muted); }
+.owned-row .acts { margin-left: auto; display: flex; gap: 6px; flex: none; }
+.owned-row .up { background: var(--honey); color: #2a1600; border: 0; border-radius: 8px; padding: 6px 10px; font-weight: 800; font-size: 12.5px; }
+.owned-row .up:disabled { background: #3a2614; color: var(--muted); }
+.lvdots { display: inline-flex; gap: 3px; margin-left: 6px; vertical-align: 1px; }
+.lvdots i { width: 6px; height: 6px; border-radius: 50%; background: #ffffff2e; } .lvdots i.on { background: var(--honey); }
 @media (max-height: 640px) {
   .charms .slot { height: 34px; font-size: 18px; }
   .rot, .seed { height: 46px; }
@@ -302,7 +349,7 @@ h2.left { text-align: left; }
       </div>
     </div>
     <div class="score-row">
-      <div class="box score-box">
+      <div class="box score-box" id="scoreBox">
         <div class="fill" id="scoreFill"></div>
         <div class="inner">
           <div><div class="lbl">Score</div><div class="big num" id="score">0</div></div>
@@ -324,14 +371,19 @@ h2.left { text-align: left; }
     <div class="banner" id="banner"></div>
   </div>
 
-  <div class="info" id="info">Press where three cells meet and drag round to turn them.</div>
-  <div class="controls">
-    <button class="rot" id="ccw" aria-label="Rotate anticlockwise">↺</button>
+  <div class="tray">
+    <div class="info" id="info">Press where three cells meet and drag round to turn them.</div>
     <button class="slot seed" id="seed0" aria-label="Seed slot 1"></button>
     <button class="slot seed" id="seed1" aria-label="Seed slot 2"></button>
+  </div>
+  <div class="controls">
+    <button class="rot" id="ccw" aria-label="Rotate anticlockwise">↺</button>
     <button class="rot" id="cw" aria-label="Rotate clockwise">↻</button>
   </div>
 </div>
+<canvas id="fx" aria-hidden="true"></canvas>
+<div class="boss-card" id="bossCard" hidden><div class="inner"><div class="k">Boss bloom</div><div class="n" id="bcName"></div><div class="r" id="bcRule"></div></div></div>
+<div class="pop" id="pop" hidden></div>
 
 <div class="screen" id="screen"><div class="card" id="screenCard"></div></div>
 <div class="toast" id="toast"></div>
@@ -357,12 +409,42 @@ const Core = (() => {
   const ROUND_MOVES = [20, 20, 18];
   const ROUND_REWARD = [3, 4, 5];
   const TARGET_MULT = [1, 1.5, 2];
-  const BASE_TARGETS = [800, 1400, 2100, 3000, 4100];
+  const BASE_TARGETS = [800, 1500, 2500, 3900, 5800];
   const FIELDS = 5;              // a full run; endless carries on past this
   const ENDLESS_GROWTH = 1.6;    // target growth per field after the last
   const BAG_MAX = 60;
-  const GOLD_CAP = 8;            // gold nectar per round (10 with Sweet Tooth)
+  const GOLD_POLLEN = 15;        // gold tiles score bonus pollen; only Sweet Tooth turns them into nectar
   const PACK_PRICE = 4;
+  const INTEREST_CAP = 3;
+  const HEART_PRICE = 8;
+  const SLOT_PRICE = 20;
+  const MAX_LEVEL = 3;
+
+  // Charm values per level (level 1, 2, 3). One value = can't be upgraded.
+  const LV = {
+    busy_bee: [2, 3, 4], amber_heart: [4, 6, 8], worker_wings: [3, 4, 5], sweet_tooth: [5, 7, 9],
+    big_family: [1, 1.5, 2], smoker: [3, 4, 5], reverse_spin: [5, 4, 3], comb_collector: [1],
+    wildflower: [10, 8, 6], last_gasp: [2, 2.5, 3], hoarder: [5, 4, 3], royal_guard: [5],
+    swarm_logic: [1.5, 1.75, 2], old_beekeeper: [1, 2, 3], golden_hive: [1],
+  };
+  const nth = (n) => n + (n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'rd' : 'th');
+  const DESC = {
+    busy_bee: v => `+${v} mult for every cascade step after the first`,
+    amber_heart: v => `+${v} mult when amber tiles clear`,
+    worker_wings: v => `+${v} moves every round`,
+    sweet_tooth: v => `Gold tiles also pay 1 nectar each (max ${v} a round)`,
+    big_family: v => `+${v} mult for each tile over 3 in a group`,
+    smoker: v => `Wasp nests start ${v} moves slower`,
+    reverse_spin: v => `Every ${nth(v)} rotation is free`,
+    comb_collector: () => 'Combs also clear a second line',
+    wildflower: v => `1 in ${v} new tiles is wild`,
+    last_gasp: v => `×${v} mult on your final move of a round`,
+    hoarder: v => `+1 mult for every ${v} nectar you hold (max +10)`,
+    royal_guard: () => 'Queens form from 5 matching neighbours instead of 6',
+    swarm_logic: v => `Cascade step 4 and beyond scores ×${v}`,
+    old_beekeeper: v => `Gains +${v} mult after every round won`,
+    golden_hive: () => 'Gold tiles also count as wild',
+  };
   const FIELD_NAMES = ['The Meadow', 'The Orchard', 'The Heath', 'Autumn Wood', 'Winter Hive'];
 
   const BOSSES = [
@@ -391,6 +473,7 @@ const Core = (() => {
     { id: 'golden_hive', name: 'Golden Hive', icon: '👑', rarity: 'Legendary', price: 15, desc: 'Gold tiles also count as wild' },
   ];
   const RARITY_WEIGHT = { Common: 60, Uncommon: 30, Rare: 9, Legendary: 2 };
+  for (const c of CHARMS) { c.level = 1; c.desc = (DESC[c.id] ? DESC[c.id]((LV[c.id] || [1])[0]) : c.desc); }
 
   const SEEDS = [
     { id: 'dandelion', name: 'Dandelion', icon: '🌾', desc: 'Recolour a tile to match most of its neighbours', target: true },
@@ -463,11 +546,20 @@ const Core = (() => {
   function drawTile(st) {
     const tpl = pick(st.rng, st.bag);
     const t = makeTile({ c: tpl.c, gold: !!tpl.gold, glass: !!tpl.glass, wild: !!tpl.wild });
-    if (has(st, 'wildflower') && st.rng() < 0.1) t.wild = true;
+    if (has(st, 'wildflower') && st.rng() < 1 / lv(st, 'wildflower')) t.wild = true;
     return t;
   }
 
   const has = (st, id) => st.charms.some(c => c.id === id);
+  const levelOf = (c) => c.level || 1;
+  const maxLevel = (id) => (LV[id] || [1]).length;
+  const valueAt = (id, level) => { const a = LV[id] || [1]; return a[Math.min(a.length, level) - 1]; };
+  const lv = (st, id) => { const c = st.charms.find(o => o.id === id); return c ? valueAt(id, levelOf(c)) : 0; };
+  const charmDesc = (c, level = levelOf(c)) => (DESC[c.id] ? DESC[c.id](valueAt(c.id, level)) : c.desc);
+  const inflation = (st) => Math.max(0, st.field - 1);          // stall prices rise by 1 each field
+  const upgradeCost = (st, c) => (levelOf(c) === 1 ? 6 : 10) + inflation(st);
+  const heartCost = (st) => HEART_PRICE + inflation(st);
+  const goldCap = (st) => lv(st, 'sweet_tooth');                 // 0 without Sweet Tooth
   const bossIs = (st, id) => !!(st.boss && st.boss.ids && st.boss.ids.includes(id));
 
   function isWild(st, t) {
@@ -741,7 +833,7 @@ const Core = (() => {
         glassCount++;
         if (st.rng() < 0.25) { const i = st.bag.findIndex(b => b.glass); if (i >= 0) st.bag.splice(i, 1); }
       }
-      if (t.gold) gold += has(st, 'sweet_tooth') ? 2 : 1;
+      if (t.gold) { gold++; pollen += GOLD_POLLEN; }
     }
     for (const tr of triggered) pollen += tr.kind === 'comb' ? 30 : tr.kind === 'burst' ? 40 : 60;
     for (const cr of created) pollen += cr.tile.kind === 'queen' ? 50 : 20;
@@ -750,15 +842,16 @@ const Core = (() => {
     const fired = [];
     const fire = (id, ok) => { if (ok && has(st, id)) { fired.push(id); return true; } return false; };
     let mult = 1 + (frost ? Math.min(step, 2) : step);
-    if (fire('busy_bee', step > 1)) mult += 2 * (step - 1);
-    if (fire('amber_heart', amber)) mult += 4;
+    if (fire('busy_bee', step > 1)) mult += lv(st, 'busy_bee') * (step - 1);
+    if (fire('amber_heart', amber)) mult += lv(st, 'amber_heart');
     const extra = groups.reduce((n, g) => n + Math.max(0, g.keys.length - 3), 0);
-    if (fire('big_family', extra > 0)) mult += extra;
-    if (fire('hoarder', st.nectar >= 5)) mult += Math.floor(st.nectar / 5);
+    if (fire('big_family', extra > 0)) mult += extra * lv(st, 'big_family');
+    if (fire('hoarder', has(st, 'hoarder') && st.nectar >= lv(st, 'hoarder'))) mult += Math.min(10, Math.floor(st.nectar / lv(st, 'hoarder')));
     const ob = st.charms.find(c => c.id === 'old_beekeeper'); if (ob && ob.counter) { mult += ob.counter; fired.push('old_beekeeper'); }
+    mult = Math.round(mult * 10) / 10;
     let xmult = glassCount ? 1.5 : 1;   // glass counts once per clear, not per tile
-    if (fire('swarm_logic', step >= 4)) xmult *= 1.5;
-    if (fire('last_gasp', isLastMove)) xmult *= 2;
+    if (fire('swarm_logic', step >= 4)) xmult *= lv(st, 'swarm_logic');
+    if (fire('last_gasp', isLastMove)) xmult *= lv(st, 'last_gasp');
     fire('comb_collector', triggered.some(tr => tr.kind === 'comb'));
     if (rd.jelly) xmult *= 2;
     if (jellyBlast) { rd.jelly = true; xmult *= 2; }
@@ -766,8 +859,7 @@ const Core = (() => {
     const score = Math.round(pollen * mult * xmult);
 
     rd.score += score;
-    const cap = GOLD_CAP + (has(st, 'sweet_tooth') ? 2 : 0);
-    gold = Math.max(0, Math.min(gold, cap - rd.goldEarned));
+    gold = Math.max(0, Math.min(gold, goldCap(st) - rd.goldEarned));   // only Sweet Tooth pays nectar for gold
     if (gold) fire('sweet_tooth', true);
     st.nectar += gold + waspsCleared;   // each nest smoked out pays 1 nectar
     rd.goldEarned += gold;
@@ -785,7 +877,7 @@ const Core = (() => {
   }
 
   // ---------- Wasps ----------
-  function waspStart(st) { return 9 + (has(st, 'smoker') ? 3 : 0); }
+  function waspStart(st) { return 9 + lv(st, 'smoker'); }
   function spawnWasp(st) {
     const opts = CELLS.filter(c => st.board[c.key] && st.board[c.key].kind === 'n' && !st.board[c.key].gold);
     if (!opts.length) return null;
@@ -814,7 +906,7 @@ const Core = (() => {
     const st = {
       seed, rngState: seed, field: 1, roundIdx: 0, hearts: 3, nectar: 4, charms: [], seeds: [],
       colours: 5, bag: newBag(5), boss: null, bossQueue: [], board: null, round: null, shop: null,
-      fieldBoss: null, fieldBossFor: 0, endless: false,
+      fieldBoss: null, fieldBossFor: 0, endless: false, charmSlots: 5,
       stats: { rounds: 0, bestStep: 0, bestScore: 0 }, over: false, won: false,
     };
     attachRng(st);
@@ -830,7 +922,7 @@ const Core = (() => {
       return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
   }
-  const SAVE_KEYS = ['seed', 'rngState', 'field', 'roundIdx', 'hearts', 'nectar', 'charms', 'seeds', 'colours', 'bag', 'bossQueue', 'stats', 'shop', 'droughtColour', 'fieldBoss', 'fieldBossFor', 'endless'];
+  const SAVE_KEYS = ['seed', 'rngState', 'field', 'roundIdx', 'hearts', 'nectar', 'charms', 'seeds', 'colours', 'bag', 'bossQueue', 'stats', 'shop', 'droughtColour', 'fieldBoss', 'fieldBossFor', 'endless', 'charmSlots'];
   function serialize(st) { const o = { v: 2 }; for (const k of SAVE_KEYS) o[k] = st[k]; return JSON.stringify(o); }
   function restore(json) {
     const o = JSON.parse(json); if (!o || o.v !== 2) return null;
@@ -885,7 +977,7 @@ const Core = (() => {
   function startRound(st) {
     prepField(st);
     st.boss = st.roundIdx === 2 ? st.fieldBoss : null;
-    const moves = ROUND_MOVES[st.roundIdx] + (has(st, 'worker_wings') ? 3 : 0);
+    const moves = ROUND_MOVES[st.roundIdx] + lv(st, 'worker_wings');
     st.round = { target: target(st), moves, movesMax: moves, score: 0, rotations: 0, jelly: false, jellyPending: false, goldEarned: 0, result: null };
     st.board = fillBoard(st);
     let nests = st.field >= 2 ? Math.min(3, Math.ceil((st.field - 1) / 2)) : 0;
@@ -900,7 +992,7 @@ const Core = (() => {
     if (dir < 0 && bossIs(st, 'gale')) return false;
     rotate(st.board, TRIOS[trioIndex], dir);
     rd.rotations++;
-    const free = has(st, 'reverse_spin') && rd.rotations % 5 === 0;
+    const free = has(st, 'reverse_spin') && rd.rotations % lv(st, 'reverse_spin') === 0;
     if (!free) rd.moves--;
     if (bossIs(st, 'thief')) st.nectar = Math.max(0, st.nectar - 1);
     return { free };
@@ -938,9 +1030,9 @@ const Core = (() => {
     const rd = st.round;
     const unused = Math.min(5, rd.moves);
     const reward = ROUND_REWARD[st.roundIdx];
-    const interest = Math.min(5, Math.floor(st.nectar / 5));
+    const interest = Math.min(INTEREST_CAP, Math.floor(st.nectar / 5));
     st.nectar += reward + unused + interest;
-    const ob = st.charms.find(c => c.id === 'old_beekeeper'); if (ob) ob.counter = (ob.counter || 0) + 1;
+    const ob = st.charms.find(c => c.id === 'old_beekeeper'); if (ob) ob.counter = (ob.counter || 0) + valueAt('old_beekeeper', levelOf(ob));
     st.stats.rounds++;
     const summary = { reward, unused, interest, gold: rd.goldEarned, score: rd.score, target: rd.target };
     if (st.roundIdx === 2) st.hearts = Math.min(3, st.hearts + 1);
@@ -972,12 +1064,13 @@ const Core = (() => {
     const ex = [];
     for (let i = 0; i < 2; i++) {
       const c = rollCharm(st, ex);
-      if (c) { ex.push(c.id); items.push({ type: 'charm', charm: c, price: c.price, sold: false }); }
+      if (c) { ex.push(c.id); items.push({ type: 'charm', charm: c, price: c.price + inflation(st), sold: false }); }
     }
     const s = pick(st.rng, SEEDS);
-    items.push({ type: 'seed', seed: s, price: 3, sold: false });
-    if (st.shop && st.shop.packBought) items.push({ type: 'pack', sold: true, soldOut: true, price: PACK_PRICE, options: [] });
-    else items.push({ type: 'pack', price: PACK_PRICE, sold: false, options: rollPackOptions(st) });
+    items.push({ type: 'seed', seed: s, price: 3 + inflation(st), sold: false });
+    const packPrice = PACK_PRICE + inflation(st);
+    if (st.shop && st.shop.packBought) items.push({ type: 'pack', sold: true, soldOut: true, price: packPrice, options: [] });
+    else items.push({ type: 'pack', price: packPrice, sold: false, options: rollPackOptions(st) });
     return items;
   }
   const PACK_KINDS = [['gold', 30], ['glass', 18], ['wild', 14], ['remove', 20], ['add', 18]];
@@ -991,7 +1084,7 @@ const Core = (() => {
       used.add(kind);
       const c = Math.floor(st.rng() * st.colours);
       const nm = COLOURS[c].name;
-      if (kind === 'gold') opts.push({ kind, c, n: 2, title: `2 gold ${nm.toLowerCase()}`, desc: 'Pays 1 nectar each time it clears' });
+      if (kind === 'gold') opts.push({ kind, c, n: 2, title: `2 gold ${nm.toLowerCase()}`, desc: `+${GOLD_POLLEN} pollen each time it clears` });
       if (kind === 'glass') opts.push({ kind, c, n: 1, title: `1 glass ${nm.toLowerCase()}`, desc: '×1.5 mult when it clears. May shatter' });
       if (kind === 'wild') opts.push({ kind, c, n: 1, title: '1 wild tile', desc: 'Matches any colour' });
       if (kind === 'remove') opts.push({ kind, c, n: 4, title: `Remove 4 ${nm.toLowerCase()}`, desc: 'Fewer of this colour, more of the rest' });
@@ -1015,7 +1108,25 @@ const Core = (() => {
     st.nectar -= it.price; it.sold = true; st.shop.packBought = true;
     return 'ok';
   }
-  function openShop(st) { st.shop = null; st.shop = { items: rollStock(st), rerollCost: 2, packBought: false }; return st.shop; }
+  function openShop(st) { st.shop = null; st.shop = { items: rollStock(st), rerollCost: 2 + Math.floor(inflation(st) / 2), packBought: false, heartBought: false }; return st.shop; }
+  function upgradeCharm(st, i) {
+    const c = st.charms[i]; if (!c) return 'no';
+    if (levelOf(c) >= maxLevel(c.id)) return 'max';
+    const cost = upgradeCost(st, c);
+    if (st.nectar < cost) return 'nectar';
+    st.nectar -= cost; c.level = levelOf(c) + 1; c.desc = charmDesc(c);
+    return 'ok';
+  }
+  function buyHeart(st) {
+    if (st.hearts >= 3 || st.shop.heartBought) return 'no';
+    const cost = heartCost(st); if (st.nectar < cost) return 'nectar';
+    st.nectar -= cost; st.hearts++; st.shop.heartBought = true; return 'ok';
+  }
+  function buySlot(st) {
+    if (st.charmSlots >= 6) return 'no';
+    if (st.nectar < SLOT_PRICE) return 'nectar';
+    st.nectar -= SLOT_PRICE; st.charmSlots = 6; return 'ok';
+  }
   function reroll(st) {
     if (st.nectar < st.shop.rerollCost) return false;
     st.nectar -= st.shop.rerollCost; st.shop.rerollCost++;
@@ -1025,8 +1136,8 @@ const Core = (() => {
     const it = st.shop.items[i];
     if (!it || it.sold || st.nectar < it.price) return 'nectar';
     if (it.type === 'charm') {
-      if (st.charms.length >= 5) return 'slots';
-      st.charms.push(Object.assign({}, it.charm, { counter: 0 }));
+      if (st.charms.length >= (st.charmSlots || 5)) return 'slots';
+      st.charms.push(Object.assign({}, it.charm, { counter: 0, level: 1 }));
     } else if (it.type === 'seed') {
       if (st.seeds.length >= 2) return 'slots';
       st.seeds.push(it.seed);
@@ -1038,7 +1149,7 @@ const Core = (() => {
   }
   function sellCharm(st, i) {
     const c = st.charms[i]; if (!c) return;
-    st.nectar += Math.floor(c.price / 2);
+    st.nectar += Math.floor(c.price / 2) + (levelOf(c) - 1) * 3;
     st.charms.splice(i, 1);
   }
 
@@ -1067,7 +1178,8 @@ const Core = (() => {
   }
 
   return {
-    R, SQ3, CELLS, CELL, TRIOS, COLUMNS, COLOURS, CHARMS, SEEDS, BOSSES, ROUND_NAMES, FIELDS, FIELD_NAMES, BAG_MAX, GOLD_CAP,
+    R, SQ3, CELLS, CELL, TRIOS, COLUMNS, COLOURS, CHARMS, SEEDS, BOSSES, ROUND_NAMES, FIELDS, FIELD_NAMES, BAG_MAX, GOLD_POLLEN, INTEREST_CAP, SLOT_PRICE,
+    lv, levelOf, maxLevel, charmDesc, upgradeCost, heartCost, goldCap, upgradeCharm, buyHeart, buySlot,
     newRun, serialize, restore, bestMove, prepField, fieldName, bossIs, waspCount, smokeOut, continueEndless,
     choosePack, packOptionOk, startRound, doRotate, resolveStep, endMove, roundStatus, finishRound, hasMove, shuffleBoard,
     openShop, reroll, buy, sellCharm, useSeed, isWild, has, findGroups, rotate, target, mulberry32,
@@ -1300,6 +1412,9 @@ const BIOMES = [
   { a: '#22395e', b: '#091122', plate: '#060b14', cell: '#253248', edge: '#3d516f', p: 'snow' },     // Winter Hive
 ];
 const HIVE = { a: '#2b1b0c', b: '#1c120a', plate: '#120a04', cell: '#3d2814', edge: '#5a3c1d', p: 'pollen' };
+const BOSS_BIOME = { a: '#5c0f18', b: '#120204', plate: '#0c0203', cell: '#3a1419', edge: '#7a2230', p: 'ember', boss: true };
+let bossLook = false;          // the hive is under attack: crimson field, embers, heartbeat
+let hornets = [], nextHornet = 0;
 let biome = HIVE;
 const biomeFor = (field) => BIOMES[(field - 1) % BIOMES.length];
 const bgc = $('bgfx'), bctx = bgc.getContext('2d');
@@ -1322,6 +1437,11 @@ function newMote(anywhere) {
   if (k === 'firefly') { m.sz = 1.5 + r() * 1.6; m.vx = (r() - 0.5) * 0.4; m.vy = (r() - 0.5) * 0.4; }
   if (k === 'leaf') { m.sz = 5 + r() * 3; m.vy = 0.45 + r() * 0.55; m.col = ['#c8641e', '#a8451a', '#d98b2b', '#8f3d16'][Math.floor(r() * 4)]; }
   if (k === 'snow') { m.sz = 1 + r() * 2.4; m.vy = 0.3 + r() * 0.6; }
+  if (k === 'ember') {
+    m.sz = 1.2 + r() * 2.2; m.vy = -(0.5 + r() * 0.9); m.y = anywhere ? m.y : H + 10;
+    m.vx = (st && C.bossIs(st, 'gale')) ? 1.6 + r() * 1.4 : (r() - 0.5) * 0.3;
+    if (st && C.bossIs(st, 'gale') && !anywhere) { m.x = -20; m.y = r() * H; }
+  }
   return m;
 }
 function drawBg() {
@@ -1350,8 +1470,112 @@ function drawBg() {
       bctx.beginPath(); bctx.moveTo(-m.sz, 0); bctx.quadraticCurveTo(0, -m.sz * 0.7, m.sz, 0); bctx.quadraticCurveTo(0, m.sz * 0.7, -m.sz, 0); bctx.fill();
     }
     if (k === 'snow') { bctx.globalAlpha = 0.65; bctx.fillStyle = '#f2f6ff'; bctx.beginPath(); bctx.arc(0, 0, m.sz, 0, 6.29); bctx.fill(); }
+    if (k === 'ember') {
+      const a = 0.45 + 0.4 * Math.sin(m.ph * 3);
+      const g = bctx.createRadialGradient(0, 0, 0, 0, 0, m.sz * 3.5);
+      g.addColorStop(0, 'rgba(255,170,80,.9)'); g.addColorStop(0.4, 'rgba(255,80,40,.35)'); g.addColorStop(1, 'rgba(255,40,20,0)');
+      bctx.globalAlpha = a; bctx.fillStyle = g; bctx.beginPath(); bctx.arc(0, 0, m.sz * 3.5, 0, 6.29); bctx.fill();
+    }
     bctx.restore();
   }
+  // The Hornet: dark shapes zipping past behind the board
+  if (bossLook && st && C.bossIs(st, 'hornet') && !reduceMotion) {
+    const now = performance.now();
+    if (now > nextHornet) { const fromLeft = Math.random() < 0.5; hornets.push({ x: fromLeft ? -40 : W + 40, y: H * (0.2 + Math.random() * 0.6), vx: (fromLeft ? 1 : -1) * (5 + Math.random() * 3), ph: Math.random() * 6 }); nextHornet = now + 1800 + Math.random() * 2600; }
+    hornets = hornets.filter(h => h.x > -60 && h.x < W + 60);
+    for (const h of hornets) {
+      h.x += h.vx; h.ph += 0.25; const y = h.y + Math.sin(h.ph * 0.4) * 14;
+      bctx.save(); bctx.translate(h.x, y); bctx.scale(Math.sign(h.vx), 1); bctx.globalAlpha = 0.5;
+      bctx.fillStyle = 'rgba(255,255,255,.35)'; const w = 6 + Math.abs(Math.sin(h.ph * 3)) * 5;
+      bctx.beginPath(); bctx.ellipse(-2, -9, w, 4, -0.5, 0, 6.29); bctx.fill(); bctx.beginPath(); bctx.ellipse(4, -9, w, 4, 0.5, 0, 6.29); bctx.fill();
+      bctx.fillStyle = '#120507'; bctx.beginPath(); bctx.ellipse(0, 0, 16, 7, 0, 0, 6.29); bctx.fill();
+      bctx.fillStyle = 'rgba(230,170,40,.6)'; for (const sx of [-7, -1, 5]) bctx.fillRect(sx, -6, 3, 12);
+      bctx.restore();
+    }
+  }
+}
+
+// ---------- Screen effects: heartbeat vignette, boss weather, the release ----------
+const fxc = $('fx'), fctx = fxc.getContext('2d');
+function fxSize() { const d = Math.min(window.devicePixelRatio || 1, 2); fxc.width = innerWidth * d; fxc.height = innerHeight * d; fctx.setTransform(d, 0, 0, d, 0, 0); frostArt = null; }
+let frostArt = null, streaks = [], nextGlitch = 0, glitchUntil = 0, releaseFx = null;
+addEventListener('resize', fxSize); fxSize();
+function makeFrost(W, H) {
+  const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
+  for (const [cx, cy] of [[0, 0], [W, 0], [0, H], [W, H]]) {
+    const rg = g.createRadialGradient(cx, cy, 0, cx, cy, Math.min(W, H) * 0.42);
+    rg.addColorStop(0, 'rgba(210,238,255,.55)'); rg.addColorStop(1, 'rgba(210,238,255,0)');
+    g.fillStyle = rg; g.fillRect(0, 0, W, H);
+    g.strokeStyle = 'rgba(235,248,255,.5)'; g.lineWidth = 1.2;
+    for (let i = 0; i < 9; i++) {
+      let x = cx, y = cy, a = Math.atan2(H / 2 - cy, W / 2 - cx) + (Math.random() - 0.5) * 1.4;
+      g.beginPath(); g.moveTo(x, y);
+      for (let j = 0; j < 7; j++) {
+        const len = 10 + Math.random() * 22; x += Math.cos(a) * len; y += Math.sin(a) * len; g.lineTo(x, y);
+        if (Math.random() < 0.6) { const b = a + (Math.random() < 0.5 ? 1 : -1) * 0.9; g.moveTo(x, y); g.lineTo(x + Math.cos(b) * len * 0.6, y + Math.sin(b) * len * 0.6); g.moveTo(x, y); }
+        a += (Math.random() - 0.5) * 0.5;
+      }
+      g.stroke();
+    }
+  }
+  return c;
+}
+function heartbeat(now, period) { const t = (now % period) / period; return Math.max(0, 1 - t * 7) + 0.6 * Math.max(0, 1 - Math.abs(t - 0.2) * 7); }
+function drawFx(now) {
+  const W = innerWidth, H = innerHeight;
+  fctx.clearRect(0, 0, W, H);
+  const playing = st && st.round && !st.round.done && $('screen').hidden;
+  const low = playing && st.round.moves <= 3;
+  if ((bossLook && playing) || low) {
+    const period = low ? 560 : 860;
+    const beat = reduceMotion ? 0.3 : heartbeat(now, period);
+    const base = bossLook ? 0.22 : 0.1, amp = bossLook ? (low ? 0.36 : 0.2) : 0.18;
+    const tint = bossLook && C.bossIs(st, 'drought') ? '190,80,10' : '185,12,30';
+    const g = fctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.42, W / 2, H / 2, Math.hypot(W, H) * 0.58);
+    g.addColorStop(0, `rgba(${tint},0)`); g.addColorStop(1, `rgba(${tint},${(base + amp * beat).toFixed(3)})`);
+    fctx.fillStyle = g; fctx.fillRect(0, 0, W, H);
+  }
+  if (bossLook && playing) {
+    if (C.bossIs(st, 'frost')) { if (!frostArt) frostArt = makeFrost(W, H); fctx.globalAlpha = 0.5 + (reduceMotion ? 0 : 0.1 * Math.sin(now / 900)); fctx.drawImage(frostArt, 0, 0, W, H); fctx.globalAlpha = 1; }
+    if (C.bossIs(st, 'gale') && !reduceMotion) {
+      while (streaks.length < 14) streaks.push({ x: -Math.random() * W, y: Math.random() * H, len: 60 + Math.random() * 140, v: 9 + Math.random() * 9 });
+      fctx.strokeStyle = 'rgba(255,240,240,.16)'; fctx.lineWidth = 1.5;
+      for (const k of streaks) { k.x += k.v; if (k.x - k.len > W) { k.x = -k.len; k.y = Math.random() * H; } fctx.beginPath(); fctx.moveTo(k.x - k.len, k.y); fctx.lineTo(k.x, k.y + 4); fctx.stroke(); }
+    }
+    if (C.bossIs(st, 'thief') && !reduceMotion) {
+      if (now > nextGlitch) {
+        nextGlitch = now + 2400 + Math.random() * 3200; glitchUntil = now + 150;
+        const hud = document.querySelector('.hud'); hud.classList.remove('glitch'); void hud.offsetWidth; hud.classList.add('glitch');
+      }
+      if (now < glitchUntil) for (let i = 0; i < 5; i++) { fctx.fillStyle = i % 2 ? 'rgba(0,255,255,.10)' : 'rgba(255,0,200,.10)'; fctx.fillRect(0, Math.random() * H, W, 4 + Math.random() * 16); }
+    }
+  }
+  if (releaseFx) {
+    const t = now - releaseFx.t0;
+    if (t < 380) {
+      const k = t / 380;
+      fctx.save(); fctx.strokeStyle = '#fff4e8'; fctx.lineWidth = 3; fctx.shadowColor = '#ffd0a0'; fctx.shadowBlur = 12;
+      for (const line of releaseFx.lines) { fctx.beginPath(); fctx.moveTo(W / 2, H / 2); const n = Math.max(1, Math.ceil(line.length * k)); for (let i = 0; i < n; i++) fctx.lineTo(line[i][0], line[i][1]); fctx.stroke(); }
+      fctx.restore();
+    } else if (t < 900) {
+      fctx.fillStyle = `rgba(255,248,230,${(0.65 * (1 - (t - 380) / 520)).toFixed(3)})`; fctx.fillRect(0, 0, W, H);
+    } else releaseFx = null;
+  }
+}
+// The boss is beaten: the screen cracks, the red drains away and the field comes back.
+async function bossRelease() {
+  const W = innerWidth, H = innerHeight, lines = [];
+  for (let i = 0; i < 11; i++) {
+    let a = (i / 11) * Math.PI * 2 + Math.random() * 0.3, x = W / 2, y = H / 2; const pts = [];
+    for (let j = 0; j < 9; j++) { const len = Math.hypot(W, H) / 16; a += (Math.random() - 0.5) * 0.7; x += Math.cos(a) * len; y += Math.sin(a) * len; pts.push([x, y]); }
+    lines.push(pts);
+  }
+  releaseFx = { t0: performance.now(), lines };
+  clip('glass-smash', { gain: 0.5, rate: 0.8 }); buzz([30, 30, 60]);
+  await wait(380);
+  bossLook = false; $('board').classList.remove('parched'); setBiome(biomeFor(st.field));
+  for (let i = 0; i < 14; i++) burstParticles(C.CELLS[Math.floor(Math.random() * C.CELLS.length)].key, '#ffd877', 5);
+  await wait(560);
 }
 
 // ---------- State ----------
@@ -1381,11 +1605,25 @@ function layout() {
   const r = $('boardWrap').getBoundingClientRect();
   const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
   cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
-  const s = Math.min(r.width / (1.5 * 2 * C.R + 2 + 0.3), (r.height - 34) / (C.SQ3 * (2 * C.R + 1) + 0.3));
+  const s = Math.min(r.width / (1.5 * 2 * C.R + 2 + 0.05), (r.height - 30) / (C.SQ3 * (2 * C.R + 1) + 0.2));
   geo = { s, ox: r.width / 2, oy: r.height / 2 + 14, w: r.width, h: r.height, dpr };
 }
 new ResizeObserver(layout).observe($('boardWrap'));
 const px = (x, y) => [geo.ox + x * geo.s, geo.oy + y * geo.s];
+let plate = null, plateKey = '';
+function plateCanvas() {
+  const key = [cv.width, cv.height, geo.s, biome.plate, biome.cell, biome.edge, !!biome.boss].join('|');
+  if (plate && key === plateKey) return plate;
+  plate = plate || document.createElement('canvas');
+  plate.width = cv.width; plate.height = cv.height; plateKey = key;
+  const pc = plate.getContext('2d'); pc.setTransform(geo.dpr, 0, 0, geo.dpr, 0, 0);
+  const hp = (cx, cy, r) => { pc.beginPath(); for (let i = 0; i < 6; i++) { const a = Math.PI / 3 * i; const X = cx + r * Math.cos(a), Y = cy + r * Math.sin(a); i ? pc.lineTo(X, Y) : pc.moveTo(X, Y); } pc.closePath(); };
+  const s = geo.s;
+  if (biome.boss) { pc.save(); pc.shadowColor = 'rgba(255,40,60,.85)'; pc.shadowBlur = s * 0.9; pc.fillStyle = biome.plate; for (const c of C.CELLS) { if (c.nb.length === 6) continue; const [x, y] = px(c.x, c.y); hp(x, y, s * 1.08); pc.fill(); } pc.restore(); }
+  for (const c of C.CELLS) { const [x, y] = px(c.x, c.y); hp(x, y, s * 1.08); pc.fillStyle = biome.plate; pc.fill(); }
+  for (const c of C.CELLS) { const [x, y] = px(c.x, c.y); hp(x, y, s * 0.97); pc.fillStyle = biome.cell; pc.fill(); pc.lineWidth = 1; pc.strokeStyle = biome.edge; pc.stroke(); }
+  return plate;
+}
 
 function hexPath(cx, cy, r) {
   ctx.beginPath();
@@ -1480,12 +1718,28 @@ function drawTile(t, x, y, r, alpha) {
     ctx.beginPath(); ctx.moveTo(x - w, y + h * .6); ctx.lineTo(x - w, y - h * .4); ctx.lineTo(x - w * .5, y); ctx.lineTo(x, y - h * .9); ctx.lineTo(x + w * .5, y); ctx.lineTo(x + w, y - h * .4); ctx.lineTo(x + w, y + h * .6); ctx.closePath();
     ctx.fill(); ctx.stroke();
   }
-  if (t.gold) { hexPath(x, y, r * 0.93); ctx.lineWidth = r * 0.14; ctx.strokeStyle = '#ffd86b'; ctx.stroke(); }
+  if (t.gold) {
+    // metallic rim with a glint that sweeps across now and then
+    const g = ctx.createLinearGradient(x - r, y - r, x + r, y + r);
+    g.addColorStop(0, '#fff6c4'); g.addColorStop(0.35, '#e0a51c'); g.addColorStop(0.6, '#ffe58a'); g.addColorStop(1, '#a8700c');
+    hexPath(x, y, r * 0.9); ctx.lineWidth = r * 0.17; ctx.strokeStyle = g; ctx.stroke();
+    const gt = ((performance.now() + t.id * 397) % 3200) / 3200;
+    if (gt < 0.22 && !reduceMotion) {
+      const bx2 = x - r * 1.4 + (gt / 0.22) * r * 2.8;
+      ctx.save(); hexPath(x, y, r); ctx.clip();
+      ctx.globalAlpha *= 0.55; ctx.fillStyle = '#fffbe6';
+      ctx.beginPath(); ctx.moveTo(bx2 - r * 0.18, y - r); ctx.lineTo(bx2 + r * 0.12, y - r); ctx.lineTo(bx2 - r * 0.28, y + r); ctx.lineTo(bx2 - r * 0.58, y + r); ctx.fill();
+      ctx.restore();
+    }
+  }
   if (t.glass) {
+    // frosted: a milky wash, a hard shine and a cool, thin rim
     ctx.save(); hexPath(x, y, r); ctx.clip();
-    ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.beginPath(); ctx.moveTo(x - r, y - r * .2); ctx.lineTo(x - r * .2, y - r); ctx.lineTo(x + r * .1, y - r); ctx.lineTo(x - r, y + r * .1); ctx.fill();
+    ctx.fillStyle = 'rgba(235,248,255,.24)'; ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.moveTo(x - r, y - r * .25); ctx.lineTo(x - r * .3, y - r); ctx.lineTo(x - r * .05, y - r); ctx.lineTo(x - r, y + r * .05); ctx.fill();
     ctx.restore();
-    hexPath(x, y, r * 0.95); ctx.lineWidth = r * 0.08; ctx.strokeStyle = 'rgba(220,240,255,.9)'; ctx.stroke();
+    hexPath(x, y, r * 0.95); ctx.lineWidth = r * 0.06; ctx.strokeStyle = '#bfe6ff'; ctx.stroke();
+    hexPath(x, y, r * 0.8); ctx.lineWidth = r * 0.03; ctx.strokeStyle = 'rgba(191,230,255,.55)'; ctx.stroke();
   }
   ctx.restore();
 }
@@ -1494,6 +1748,7 @@ function drawTile(t, x, y, r, alpha) {
 function draw(now) {
   requestAnimationFrame(draw);
   drawBg();
+  drawFx(now);
   ctx.setTransform(geo.dpr, 0, 0, geo.dpr, 0, 0);
   ctx.clearRect(0, 0, geo.w, geo.h);
   if (!st || !st.board) return;
@@ -1506,11 +1761,8 @@ function draw(now) {
   if (now < shakeT) { sx = (Math.random() - .5) * 8; sy = (Math.random() - .5) * 8; }
   ctx.save(); ctx.translate(sx, sy);
   const s = geo.s;
-  // board backplate
-  ctx.save();
-  for (const c of C.CELLS) { const [x, y] = px(c.x, c.y); hexPath(x, y, s * 1.08); ctx.fillStyle = biome.plate; ctx.fill(); }
-  for (const c of C.CELLS) { const [x, y] = px(c.x, c.y); hexPath(x, y, s * 0.97); ctx.fillStyle = biome.cell; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = biome.edge; ctx.stroke(); }
-  ctx.restore();
+  // board backplate (drawn once into a cache, redrawn when the size or look changes)
+  ctx.drawImage(plateCanvas(), 0, 0, geo.w, geo.h);
   // clip new tiles above the board
   const topY = geo.oy - C.SQ3 * (C.R + 0.5) * s;
   // tiles (the lifted trio is drawn last, on top)
@@ -1522,7 +1774,7 @@ function draw(now) {
     const [bx, by, a0] = tilePos(t, c.key, now);
     const [x, y] = px(bx, by);
     let alpha = a0;
-    if (y < topY) alpha = Math.max(0, 1 - (topY - y) / (s * 1.5));
+    if (y < topY) alpha = Math.min(alpha, Math.max(0, 1 - (topY - y) / (s * 1.5)));
     let r = s * 0.86;
     const fl = flashes.find(f => f.key === c.key);
     if (fl) { const ft = (now - fl.t0) / 400; if (ft < 1) r *= 1 + 0.25 * Math.sin(ft * Math.PI); }
@@ -1636,24 +1888,36 @@ function renderHUD() {
   if (!st || !st.round) return;
   const rd = st.round;
   const fieldTxt = st.field > C.FIELDS ? `Endless <b>${st.field}</b>` : `Field <b>${st.field}</b>/${C.FIELDS}`;
-  $('where').innerHTML = `${fieldTxt} · ${st.boss ? '<b style="color:var(--mult)">' + st.boss.name + '</b>' : C.ROUND_NAMES[st.roundIdx]}`;
+  const pips = [0, 1, 2].map(i => `<i class="${i < st.roundIdx ? 'done' : i === st.roundIdx ? 'now' : ''} ${i === 2 ? 'boss' : ''}"></i>`).join('');
+  $('where').innerHTML = `${fieldTxt}<span class="pips" aria-hidden="true">${pips}</span>${st.boss ? '<b style="color:var(--mult)">' + st.boss.name + '</b>' : C.ROUND_NAMES[st.roundIdx]}`;
   $('hearts').innerHTML = [0, 1, 2].map(i => `<span class="${i < st.hearts ? '' : 'lost'}">❤️</span>`).join('');
   $('target').textContent = fmt(rd.target);
   $('scoreFill').style.width = Math.min(100, rd.score / rd.target * 100) + '%';
+  const met = rd.score >= rd.target, sb = $('scoreBox');
+  if (met && !sb.classList.contains('met')) { sb.classList.remove('flash'); void sb.offsetWidth; sb.classList.add('flash'); }
+  sb.classList.toggle('met', met);
   $('moves').textContent = rd.moves;
   $('movesBox').classList.toggle('low', rd.moves <= 3);
   $('nectar').textContent = st.nectar;
+  if (lastNectar !== null && st.nectar !== lastNectar) {
+    const d = st.nectar - lastNectar, el = document.createElement('span');
+    el.className = 'npop' + (d < 0 ? ' neg' : ''); el.textContent = (d > 0 ? '+' : '−') + Math.abs(d);
+    document.querySelector('.stat.nectar').appendChild(el); setTimeout(() => el.remove(), 1000);
+  }
+  lastNectar = st.nectar;
   const ch = $('charms'); ch.innerHTML = '';
-  for (let i = 0; i < 5; i++) {
+  const slots = st.charmSlots || 5; ch.style.setProperty('--slots', slots);
+  for (let i = 0; i < slots; i++) {
     const c = st.charms[i];
     const b = document.createElement('button');
     b.className = 'slot' + (c ? ' filled' : '');
     b.id = 'charm' + i;
     b.setAttribute('aria-label', c ? c.name : 'Empty charm slot');
     if (c) {
-      b.innerHTML = c.icon + (c.id === 'old_beekeeper' && c.counter ? `<span class="cnt">+${c.counter}</span>` : '');
-      b.onclick = () => info(`${c.icon} <b>${c.name}</b> · ${c.desc}`);
-    } else b.onclick = () => info('Empty charm slot. Buy charms in the shop between rounds.');
+      const lvl = C.levelOf(c);
+      b.innerHTML = c.icon + (c.id === 'old_beekeeper' && c.counter ? `<span class="cnt">+${c.counter}</span>` : '') + (lvl > 1 ? `<span class="lv">${'<i></i>'.repeat(lvl)}</span>` : '');
+      b.onclick = (e) => { e.stopPropagation(); showPop(c, b); };
+    } else b.onclick = (e) => { e.stopPropagation(); showPop(null, b); };
     ch.appendChild(b);
   }
   for (let i = 0; i < 2; i++) {
@@ -1665,8 +1929,29 @@ function renderHUD() {
   const gale = C.bossIs(st, 'gale');
   $('ccw').disabled = gale;
 }
+function showPop(c, anchor) {
+  const pop = $('pop');
+  if (!pop.hidden && pop.dataset.for === anchor.id) { pop.hidden = true; return; }
+  if (c) {
+    const lvl = C.levelOf(c), max = C.maxLevel(c.id);
+    pop.innerHTML = `<div class="pn"><span style="font-size:20px">${c.icon}</span>${c.name}</div>
+      ${max > 1 ? `<div class="pl">${[1, 2, 3].map(n => `<i class="${n <= lvl ? 'on' : ''}"></i>`).join('')}<span>Level ${lvl} of ${max}</span></div>` : ''}
+      <div>${C.charmDesc(c)}</div>
+      ${max > lvl ? '<div class="pl">Upgrade it at the stall</div>' : ''}`;
+  } else pop.innerHTML = '<div class="pn">Empty charm slot</div><div>Buy charms at the stall between rounds.</div>';
+  pop.dataset.for = anchor.id; pop.hidden = false;
+  const r = anchor.getBoundingClientRect(), w = pop.offsetWidth;
+  pop.style.left = Math.max(12, Math.min(innerWidth - w - 12, r.left + r.width / 2 - w / 2)) + 'px';
+  pop.style.top = (r.bottom + 8) + 'px';
+  clearTimeout(pop._t); pop._t = setTimeout(() => { pop.hidden = true; }, 4500);
+}
+document.addEventListener('pointerdown', (e) => { const pop = $('pop'); if (!pop.hidden && !e.target.closest('#pop') && !e.target.closest('.charms')) pop.hidden = true; });
+let lastNectar = null;
+const HINT_MOVES = 15;   // after this many moves, the how-to hint stays out of the way
+function hintsLearned() { return store.get('movesMade', 0) >= HINT_MOVES; }
 function info(html, useLabel, onUse) {
   const el = $('info');
+  el.classList.toggle('quiet', !html);
   el.innerHTML = `<span>${html}</span>`;
   if (useLabel) { const b = document.createElement('button'); b.className = 'use'; b.textContent = useLabel; b.onclick = onUse; el.appendChild(b); }
 }
@@ -1674,6 +1959,7 @@ function defaultInfo() {
   if (armedSeed >= 0) return;
   if (st && st.round && C.roundStatus(st) === 'smoke') { info('<b>Smoke them out:</b> clear the last nest to finish. Any left when moves run out sting once.'); return; }
   if (st.boss) info(`<b>${st.boss.name}:</b> ${st.boss.rule}`);
+  else if (hintsLearned()) info('');
   else info(selected >= 0 ? 'Drag round to turn, then let go to lock it in. Or tap ↺ ↻.' : 'Press where three cells meet and drag round to turn them.');
 }
 let toastT = 0;
@@ -1855,7 +2141,7 @@ function applyFall(moves, delay) {
 
 async function cascade(stepStart, pivotKeys) {
   let step = stepStart, res;
-  const goldCap = C.GOLD_CAP + (C.has(st, 'sweet_tooth') ? 2 : 0);
+  const goldCap = C.goldCap(st);
   while ((res = C.resolveStep(st, step, pivotKeys, st.round.moves === 0))) {
     const now = performance.now();
     showTally(res);
@@ -1881,7 +2167,7 @@ async function cascade(stepStart, pivotKeys) {
     applyFall(res.moves, dur(240));
     renderHUD();
     pulseCharms(res.fired);
-    if (st.round.goldEarned >= goldCap && !st.round.capToast) { st.round.capToast = true; toast(`Gold is maxed for this round (${goldCap} nectar)`); }
+    if (goldCap && st.round.goldEarned >= goldCap && !st.round.capToast) { st.round.capToast = true; toast(`Sweet Tooth is maxed for this round (${goldCap} nectar)`); }
     st.stats.bestStep = Math.max(st.stats.bestStep, step);
     if (step >= 3) floaters.push({ x: 0, y: -C.R * 1.55, text: step >= 5 ? `Mega chain ×${step}!` : `Chain ×${step}!`, c: '#f5a623', t0: now + dur(120) });
     await wait(dur(240 + 420));
@@ -1943,7 +2229,7 @@ async function handleStatus(status) {
     }
     status = st.hearts <= 0 ? 'lost' : 'won';
   }
-  if (status === 'won') { selected = -1; await wait(dur(300)); roundWon(); }
+  if (status === 'won') { selected = -1; if (bossLook) await bossRelease(); else await wait(dur(300)); roundWon(); }
   else if (status === 'lost') { selected = -1; await wait(dur(400)); runOver(); }
   else defaultInfo();
 }
@@ -1961,6 +2247,7 @@ async function playMove(trioIdx, dir, skipArc) {
     anims.set(t.id, { arc: { cx: trio.x, cy: trio.y, r: Math.hypot(c.x - trio.x, c.y - trio.y), a0, a1: a0 + dir * 2 * Math.PI / 3 }, t0: now, dur: dur(170) });
   }
   const r = C.doRotate(st, trioIdx, dir);
+  store.set('movesMade', store.get('movesMade', 0) + 1);
   if (r && r.free) { toast('Reverse Spin: free rotation'); pulseCharms(['reverse_spin']); }
   if (!skipArc) sfx.turn();
   renderHUD();
@@ -2009,7 +2296,7 @@ function clearSave() { try { localStorage.removeItem('hivemind.' + SAVE); } catc
 function loadSave() { const j = store.get(SAVE, null); if (!j) return null; try { return C.restore(j); } catch (e) { return null; } }
 
 function titleScreen() {
-  st = null; $('app').style.visibility = 'hidden';
+  st = null; bossLook = false; $('board').classList.remove('parched'); $('app').style.visibility = 'hidden';
   setBiome(HIVE); setMood({ boss: null, muffled: false, urgent: false, stopped: false });
   const best = store.get('best', null), bestEndless = store.get('bestEndless', 0);
   const saved = loadSave();
@@ -2027,7 +2314,7 @@ function titleScreen() {
     <div class="links"><button class="tlink" id="setBtn">Settings</button><button class="tlink" id="credBtn">Credits</button></div>
     ${best || bestEndless ? `<div class="fine">${best ? (best.won ? 'You’ve won a run' : 'Best run: field ' + best.field) : ''}${best && bestEndless ? ' · ' : ''}${bestEndless ? 'Endless best: field ' + bestEndless : ''}</div>` : ''}
     ${standalone ? '' : '<div class="install">Play full screen and offline: add Hive Mind to your home screen.<br><b>iPhone:</b> Share → Add to Home Screen · <b>Android:</b> ⋮ → Add to home screen</div>'}
-    <div class="fine">v1.2</div>
+    <div class="fine">v1.3</div>
   `, () => {
     if (saved) $('contBtn').onclick = () => { audio(); resumeRun(saved); };
     const start = (btn, endless) => () => {
@@ -2080,7 +2367,7 @@ function creditsScreen(back) {
     ${logoSVG('logo')}
     <h2>Credits</h2>
     <dl class="credits">${CREDITS.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>
-    <p class="fine">v1.2</p>
+    <p class="fine">v1.3</p>
     <button class="btn" id="backBtn">Back</button>
   `, () => { $('backBtn').onclick = back; });
 }
@@ -2103,6 +2390,13 @@ function howTo(back) {
       <div>${sw(1)} <b>Pollen burst</b> (group of 5+): clears everything around it.</div>
       <div>${sw(0)} <b>Queen</b> (ring of 6 round one cell): wild, and clears every tile of its colour.</div>
       <div>${sw(4)} <b>Royal jelly</b>: three queens touching clear the board and double your score.</div>
+      <div>✨ <b>Gold tiles</b> score +${C.GOLD_POLLEN} pollen. Only the Sweet Tooth charm turns them into nectar.</div>
+      <div>🔮 <b>Glass tiles</b> give ×1.5 mult to any clear they're in, but may shatter.</div>
+    </div>
+    <h3>The stall</h3>
+    <div class="legend">
+      <div>Buy charms, seeds and one tile pack per visit. <b>Upgrade charms</b> up to level 3, restore a heart, or buy a sixth charm slot.</div>
+      <div>Prices rise a little each field, and interest is capped at +3, so spend your nectar.</div>
     </div>
     <h3>Wasp nests</h3>
     <div class="legend">
@@ -2116,6 +2410,7 @@ function howTo(back) {
 }
 
 function startRun(endless) {
+  bossLook = false; $('board').classList.remove('parched');
   st = C.newRun();
   st.endless = !!endless;
   $('app').style.visibility = 'visible';
@@ -2128,7 +2423,7 @@ function roundIntro() {
   setBiome(biomeFor(st.field));
   setMood({ boss: null, muffled: false, urgent: false, stopped: false });
   const names = C.ROUND_NAMES, fb = st.fieldBoss;
-  const moves = [20, 20, 18].map(m => m + (C.has(st, 'worker_wings') ? 3 : 0));
+  const moves = [20, 20, 18].map(m => m + C.lv(st, 'worker_wings'));
   const reward = [3, 4, 5];
   const label = st.field > C.FIELDS ? `Endless · field ${st.field}` : `Field ${st.field} of ${C.FIELDS}`;
   showScreen(`
@@ -2152,16 +2447,28 @@ async function beginRound() {
   anims.clear(); dying = []; particles = []; selected = -1; armedSeed = -1; drag = null; settle = null; hint = null;
   C.startRound(st);
   shownScore = 0; $('score').textContent = '0'; lastInput = performance.now();
+  lastNectar = null; $('pop').hidden = true;
+  bossLook = !!st.boss;
+  $('board').classList.toggle('parched', !!st.boss && C.bossIs(st, 'drought'));
+  if (bossLook) setBiome(BOSS_BIOME);
   renderHUD();
+  busy = true;
+  if (st.boss) {
+    // the boss card slams in while the swell rises, then the board drops in hard
+    $('bcName').textContent = st.boss.name; $('bcRule').textContent = st.boss.rule;
+    const card = $('bossCard'); card.classList.remove('out'); card.hidden = false;
+    sfx.bossIntro(st.boss.ids);
+    setTimeout(() => { shakeT = performance.now() + 260; $('app').classList.remove('shake'); void $('app').offsetWidth; $('app').classList.add('shake'); buzz(50); }, 260);
+    for (const c of C.CELLS) { const t = st.board[c.key]; if (t) anims.set(t.id, { fx: c.x, fy: c.y - 14, t0: 1e12, dur: dur(380), bounce: true, alpha0: 0 }); }
+    await wait(1700);
+    card.classList.add('out'); await wait(300); card.hidden = true;
+  }
   // drop-in animation
   const now = performance.now();
-  for (const c of C.CELLS) { const t = st.board[c.key]; if (t) anims.set(t.id, { fx: c.x, fy: c.y - 9, t0: now + (c.x + 7) * 18, dur: dur(420), bounce: true, alpha0: 0 }); }
+  for (const c of C.CELLS) { const t = st.board[c.key]; if (t) anims.set(t.id, { fx: c.x, fy: c.y - (st.boss ? 14 : 9), t0: now + (c.x + 7) * (st.boss ? 12 : 18), dur: dur(st.boss ? 360 : 420), bounce: true, alpha0: 0 }); }
+  if (st.boss) setTimeout(() => { shakeT = performance.now() + 220; sfx.lock(); }, 520);
   defaultInfo();
-  if (st.boss) {
-    banner(`<span style="color:var(--mult);font-size:20px">${st.boss.name}</span><br>${st.boss.rule}`, 2400);
-    sfx.bossIntro(st.boss.ids);
-  }
-  busy = true; await wait(600); busy = false;
+  await wait(600); busy = false;
 }
 
 function roundWon() {
@@ -2175,20 +2482,27 @@ function roundWon() {
   const best = store.get('best', { field: 0, score: 0 });
   if (!st.endless) store.set('best', { field: Math.max(best.field || 0, st.won ? C.FIELDS : st.field), score: Math.max(best.score || 0, rd.score), won: best.won || st.won });
   if (st.won) { runWon(); return; }
-  const cap = C.GOLD_CAP + (C.has(st, 'sweet_tooth') ? 2 : 0);
+  const cap = C.goldCap(st);
+  const before = st.nectar - (sum.reward + sum.unused + sum.interest);
   showScreen(`
     <h2>${wasBoss ? 'Boss beaten!' : 'Round cleared!'}</h2>
     <p style="text-align:center"><span class="num" style="font-family:var(--font-display);font-size:30px">${fmt(sum.score)}</span> <span style="color:var(--muted)">/ ${fmt(sum.target)}</span></p>
-    <div class="tallylist num">
-      <div><span>Round reward</span><span>+${sum.reward}</span></div>
-      <div><span>Unused moves (max 5)</span><span>+${sum.unused}</span></div>
-      <div><span>Interest (1 per 5 held, max 5)</span><span>+${sum.interest}</span></div>
-      ${sum.gold ? `<div><span>Gold tiles (max ${cap})</span><span>+${sum.gold} banked</span></div>` : ''}
-      ${wasBoss ? `<div><span>Boss beaten</span><span>+1 heart (max 3)</span></div>` : ''}
-      <div class="tot"><span>Nectar</span><span>🍯 ${st.nectar}</span></div>
+    <div class="tallylist num anim">
+      <div style="--r:0"><span>Round reward</span><span>+${sum.reward}</span></div>
+      <div style="--r:1"><span>Unused moves (max 5)</span><span>+${sum.unused}</span></div>
+      <div style="--r:2"><span>Interest (1 per 5 held, max ${C.INTEREST_CAP})</span><span>+${sum.interest}</span></div>
+      ${sum.gold ? `<div style="--r:3"><span>Sweet Tooth gold (max ${cap})</span><span>+${sum.gold} banked</span></div>` : ''}
+      ${wasBoss ? `<div style="--r:3"><span>Boss beaten</span><span>+1 heart (max 3)</span></div>` : ''}
+      <div class="tot" style="--r:4"><span>Nectar</span><span>🍯 <span id="nTot">${before}</span></span></div>
     </div>
     <button class="btn" id="shopBtn">Visit the stall</button>
-  `, () => { $('shopBtn').onclick = () => { C.openShop(st); shopScreen(true); }; });
+  `, () => {
+    $('shopBtn').onclick = () => { C.openShop(st); shopScreen(true); };
+    // count the nectar up once the rows have landed
+    const t0 = performance.now() + (reduceMotion ? 0 : 560), to = st.nectar;
+    const tick = (now) => { const el = $('nTot'); if (!el) return; const k = Math.max(0, Math.min(1, (now - t0) / 650)); el.textContent = Math.round(before + (to - before) * k); if (k < 1) requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+  });
 }
 
 function itemCard(it, i) {
@@ -2217,8 +2531,21 @@ function shopScreen(deal) {
     <div class="shelf">${sh.items.map(itemCard).join('')}</div>
     <button class="btn ghost" id="rerollBtn" ${st.nectar < sh.rerollCost ? 'disabled' : ''}>Restock charms and seeds · ${sh.rerollCost} 🍯</button>
     <section class="kit">
-      <h3>Your charms <span>${st.charms.length}/5</span></h3>
-      <div class="owned">${st.charms.length ? st.charms.map((c, i) => `<div class="owned-row"><span style="font-size:20px">${c.icon}</span><span><b>${c.name}</b> · <span style="color:var(--muted)">${c.desc}</span></span><button class="sell" data-s="${i}">Sell ${Math.floor(c.price / 2)}</button></div>`).join('') : '<div class="fine" style="text-align:left">None yet.</div>'}</div>
+      <h3>Your charms <span>${st.charms.length}/${st.charmSlots || 5}</span></h3>
+      <div class="owned">${st.charms.length ? st.charms.map((c, i) => {
+        const lvl = C.levelOf(c), max = C.maxLevel(c.id), cost = C.upgradeCost(st, c);
+        const dots = max > 1 ? `<span class="lvdots">${[1, 2, 3].map(n => `<i class="${n <= lvl ? 'on' : ''}"></i>`).join('')}</span>` : '';
+        const nextDesc = lvl < max ? C.charmDesc(c, lvl + 1) : '';
+        return `<div class="owned-row"><span style="font-size:20px">${c.icon}</span><span><b>${c.name}</b>${dots}<br><span style="color:var(--muted)">${C.charmDesc(c)}</span>${nextDesc ? `<br><span style="color:var(--good);font-size:12px">Next: ${nextDesc}</span>` : ''}</span>
+          <span class="acts">${lvl < max ? `<button class="up" data-u="${i}" ${st.nectar < cost ? 'disabled' : ''}>Upgrade ${cost}</button>` : ''}<button class="sell" data-s="${i}">Sell ${Math.floor(c.price / 2) + (lvl - 1) * 3}</button></span></div>`;
+      }).join('') : '<div class="fine" style="text-align:left">None yet.</div>'}</div>
+      <h3>Hive services</h3>
+      <div class="services">
+        <div class="svc"><b>❤️ Honey poultice</b><small>Restore one heart. Once per visit.</small>
+          <button class="buy" id="heartBtn" ${st.hearts >= 3 || sh.heartBought || st.nectar < C.heartCost(st) ? 'disabled' : ''}>${st.hearts >= 3 ? 'Hearts full' : sh.heartBought ? 'Bought' : 'Buy · ' + C.heartCost(st) + ' 🍯'}</button></div>
+        <div class="svc"><b>➕ Sixth charm slot</b><small>Room for one more charm. Once per run.</small>
+          <button class="buy" id="slotBtn" ${(st.charmSlots || 5) >= 6 || st.nectar < C.SLOT_PRICE ? 'disabled' : ''}>${(st.charmSlots || 5) >= 6 ? 'Owned' : 'Buy · ' + C.SLOT_PRICE + ' 🍯'}</button></div>
+      </div>
       <h3>Your seeds <span>${st.seeds.length}/2</span></h3>
       <div class="owned">${st.seeds.length ? st.seeds.map(sd => `<div class="owned-row"><span style="font-size:20px">${sd.icon}</span><span><b>${sd.name}</b> · <span style="color:var(--muted)">${sd.desc}</span></span></div>`).join('') : '<div class="fine" style="text-align:left">None yet.</div>'}</div>
       <h3>Your tile bag <span>${st.bag.length}/${C.BAG_MAX}</span></h3>
@@ -2233,6 +2560,11 @@ function shopScreen(deal) {
       if (r === 'ok') { sfx.coin(); shopScreen(false); }
       else { sfx.denied(); toast(r === 'slots' ? 'No free slot. Sell one first.' : 'Not enough nectar'); }
     });
+    document.querySelectorAll('.up').forEach(b => b.onclick = () => {
+      if (C.upgradeCharm(st, +b.dataset.u) === 'ok') { sfx.coin(); clip('ding', { gain: 0.4, rate: 1.3 }); shopScreen(false); } else sfx.denied();
+    });
+    $('heartBtn').onclick = () => { if (C.buyHeart(st) === 'ok') { sfx.coin(); shopScreen(false); } else sfx.denied(); };
+    $('slotBtn').onclick = () => { if (C.buySlot(st) === 'ok') { sfx.coin(); shopScreen(false); } else sfx.denied(); };
     document.querySelectorAll('.sell').forEach(b => b.onclick = () => {
       if (b.dataset.sure !== '1') { b.dataset.sure = '1'; b.textContent = 'Tap to confirm'; return; }
       C.sellCharm(st, +b.dataset.s); sfx.sell(); shopScreen(false);
