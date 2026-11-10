@@ -2,9 +2,17 @@
 <html lang="en-GB">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<style>[hidden]{display:none!important}body{margin:0}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box}</style>
-<title>Honeyspin</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="description" content="Spin the comb, match the pollen, survive eight fields. A hex puzzle roguelike by Samderverse.">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Hive Mind">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>[hidden]{display:none!important}body{margin:0}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box}html,body{overscroll-behavior:none}</style>
+<title>Hive Mind</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="theme-color" content="#1c120a">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -194,7 +202,12 @@ p { margin: 0; line-height: 1.5; }
 .toast.show { opacity: 1; }
 .shake { animation: shake .35s; }
 @keyframes shake { 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(3px); } }
-@media (prefers-reduced-motion: reduce) { .shake, .slot.pulse { animation: none; } }
+.logo { display: block; margin: 0 auto; width: 150px; height: 150px; }
+.logo-ring { transform-origin: 75px 75px; animation: spin 24s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.install { font-size: 12.5px; color: var(--muted); text-align: center; line-height: 1.45; background: #00000030; border-radius: 12px; padding: 10px 12px; }
+.install b { color: var(--ink); }
+@media (prefers-reduced-motion: reduce) { .shake, .slot.pulse, .logo-ring { animation: none; } }
 @media (max-height: 640px) {
   .charms .slot { height: 34px; font-size: 18px; }
   .rot, .seed { height: 46px; }
@@ -236,7 +249,7 @@ p { margin: 0; line-height: 1.5; }
     <div class="banner" id="banner"></div>
   </div>
 
-  <div class="info" id="info">Tap where three cells meet, then turn them.</div>
+  <div class="info" id="info">Press where three cells meet and drag round to turn them.</div>
   <div class="controls">
     <button class="rot" id="ccw" aria-label="Rotate anticlockwise">↺</button>
     <button class="slot seed" id="seed0" aria-label="Seed slot 1"></button>
@@ -709,13 +722,44 @@ const Core = (() => {
   // ---------- Run ----------
   function newRun(seed) {
     seed = seed ?? Math.floor(Math.random() * 1e9);
-    const rng = mulberry32(seed);
     const st = {
-      seed, rng, field: 1, roundIdx: 0, hearts: 3, nectar: 4, charms: [], seeds: [],
+      seed, rngState: seed, field: 1, roundIdx: 0, hearts: 3, nectar: 4, charms: [], seeds: [],
       colours: 5, bag: newBag(5), boss: null, bossQueue: [], board: null, round: null, shop: null,
       stats: { rounds: 0, bestStep: 0, bestScore: 0 }, over: false, won: false,
     };
+    attachRng(st);
     return st;
+  }
+
+  // RNG state lives on the run so a run can be saved and resumed exactly
+  function attachRng(st) {
+    st.rng = function () {
+      let a = (st.rngState | 0) + 0x6D2B79F5 | 0; st.rngState = a;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  const SAVE_KEYS = ['seed', 'rngState', 'field', 'roundIdx', 'hearts', 'nectar', 'charms', 'seeds', 'colours', 'bag', 'bossQueue', 'stats', 'shop', 'droughtColour'];
+  function serialize(st) { const o = { v: 1 }; for (const k of SAVE_KEYS) o[k] = st[k]; return JSON.stringify(o); }
+  function restore(json) {
+    const o = JSON.parse(json); if (!o || o.v !== 1) return null;
+    const st = newRun(o.seed);
+    for (const k of SAVE_KEYS) if (o[k] !== undefined) st[k] = o[k];
+    return st;
+  }
+
+  // Best single rotation by tiles matched (used for the idle hint)
+  function bestMove(st) {
+    let best = null, bv = 0;
+    for (let i = 0; i < TRIOS.length; i++) for (const d of [1, -1]) {
+      if (d < 0 && st.boss && st.boss.id === 'gale') continue;
+      rotate(st.board, TRIOS[i], d);
+      const v = findGroups(st, st.board).reduce((s, g) => s + g.keys.length, 0);
+      rotate(st.board, TRIOS[i], -d);
+      if (v > bv) { bv = v; best = { i, d }; }
+    }
+    return best;
   }
 
   function target(st) {
@@ -879,7 +923,7 @@ const Core = (() => {
 
   return {
     R, SQ3, CELLS, CELL, TRIOS, COLUMNS, COLOURS, CHARMS, SEEDS, BOSSES, ROUND_NAMES, FIELDS,
-    newRun, startRound, doRotate, resolveStep, endMove, roundStatus, finishRound, hasMove, shuffleBoard,
+    newRun, serialize, restore, bestMove, startRound, doRotate, resolveStep, endMove, roundStatus, finishRound, hasMove, shuffleBoard,
     openShop, reroll, buy, sellCharm, useSeed, isWild, has, findGroups, rotate, target, mulberry32,
   };
 })();
@@ -894,8 +938,8 @@ const fmt = (n) => Math.round(n).toLocaleString('en-GB');
 
 // ---------- Settings & storage ----------
 const store = {
-  get(k, d) { try { const v = localStorage.getItem('honeyspin.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
-  set(k, v) { try { localStorage.setItem('honeyspin.' + k, JSON.stringify(v)); } catch (e) {} },
+  get(k, d) { try { const v = localStorage.getItem('hivemind.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('hivemind.' + k, JSON.stringify(v)); } catch (e) {} },
 };
 const settings = Object.assign({ sound: true, speed: 1 }, store.get('settings', {}));
 const SPEEDS = [1, 2, 4];
@@ -919,6 +963,8 @@ function tone(freq, len = 0.08, type = 'sine', vol = 0.12, slide = 0, delay = 0)
 }
 const sfx = {
   click() { tone(520, 0.05, 'triangle', 0.08); },
+  tick() { tone(1100, 0.025, 'square', 0.03); },
+  lock() { tone(240, 0.06, 'triangle', 0.12, -60); },
   turn() { tone(300, 0.07, 'triangle', 0.1, 120); },
   clear(step) { const base = 440 * Math.pow(2, (step - 1) * 2 / 12); tone(base, 0.12, 'sine', 0.12); tone(base * 1.5, 0.14, 'sine', 0.06, 0, 0.05); },
   special() { tone(660, 0.2, 'square', 0.05, 440); },
@@ -941,6 +987,14 @@ let particles = [];
 let floaters = [];
 let flashes = [];           // {key,t0}
 let shakeT = 0;
+let selT = 0;              // when the current trio was selected (for the lift animation)
+let drag = null;           // live rotation: {idx, was, ang, k, last, moved}
+let settle = null;         // snap animation after release: {idx, from, to, t0, dur}
+let previewKeys = new Set();
+let hint = null, lastInput = 0;
+let shownScore = 0;
+const TURN = 2 * Math.PI / 3;
+const DEAD = 0.35;         // dead zone round the pivot, in cell radii
 let geo = { s: 30, ox: 0, oy: 0, w: 0, h: 0, dpr: 1 };
 
 // ---------- Canvas & geometry ----------
@@ -1064,6 +1118,11 @@ function draw(now) {
   ctx.setTransform(geo.dpr, 0, 0, geo.dpr, 0, 0);
   ctx.clearRect(0, 0, geo.w, geo.h);
   if (!st || !st.board) return;
+  if (st.round && shownScore !== st.round.score) {
+    const diff = st.round.score - shownScore;
+    shownScore = Math.abs(diff) < 3 ? st.round.score : shownScore + diff * 0.16;
+    $('score').textContent = fmt(shownScore);
+  }
   let sx = 0, sy = 0;
   if (now < shakeT) { sx = (Math.random() - .5) * 8; sy = (Math.random() - .5) * 8; }
   ctx.save(); ctx.translate(sx, sy);
@@ -1075,8 +1134,11 @@ function draw(now) {
   ctx.restore();
   // clip new tiles above the board
   const topY = geo.oy - C.SQ3 * (C.R + 0.5) * s;
-  // tiles
+  // tiles (the lifted trio is drawn last, on top)
+  const lift = liftedTrio(now);
+  const liftKeys = lift ? C.TRIOS[lift.idx].keys : [];
   for (const c of C.CELLS) {
+    if (liftKeys.includes(c.key)) continue;
     const t = st.board[c.key]; if (!t) continue;
     const [bx, by, a0] = tilePos(t, c.key, now);
     const [x, y] = px(bx, by);
@@ -1088,20 +1150,27 @@ function draw(now) {
     drawTile(t, x, y, r, alpha);
   }
   flashes = flashes.filter(f => now - f.t0 < 400);
+  // cells outside the trio that would clear if you let go now
+  if ((drag || settle) && previewKeys.size) {
+    const pulse = 0.5 + 0.5 * Math.sin(now / 90);
+    ctx.lineWidth = 3; ctx.strokeStyle = `rgba(127,240,176,${0.45 + 0.45 * pulse})`;
+    for (const k of previewKeys) { if (liftKeys.includes(k)) continue; const c = C.CELL[k]; const [x, y] = px(c.x, c.y); hexPath(x, y, s * 0.9); ctx.stroke(); }
+  }
+  // idle hint
+  if (!lift && !busy && st.round && $('screen').hidden && now - lastInput > 10000 && C.roundStatus(st) === 'playing') {
+    if (!hint) hint = C.bestMove(st) || { i: -1 };
+    if (hint.i >= 0) {
+      const tr = C.TRIOS[hint.i]; const [hx, hy] = px(tr.x, tr.y); const p = 0.5 + 0.5 * Math.sin(now / 260);
+      ctx.beginPath(); ctx.arc(hx, hy, s * (1.25 + 0.12 * p), 0, Math.PI * 2);
+      ctx.lineWidth = 3; ctx.strokeStyle = `rgba(255,246,220,${0.25 + 0.4 * p})`; ctx.stroke();
+    }
+  }
+  if (lift) drawLifted(lift, now);
   // dying tiles
   dying = dying.filter(d => now - d.t0 < d.dur);
   for (const d of dying) {
     const t = (now - d.t0) / d.dur; const [x, y] = px(d.x, d.y);
     drawTile(d.tile, x, y, s * 0.86 * (1 + 0.25 * t) * (1 - ease(t) * 0.9), 1 - t);
-  }
-  // selection
-  if (selected >= 0 && !busy) {
-    const trio = C.TRIOS[selected];
-    ctx.lineWidth = 3; ctx.strokeStyle = '#fff6dc';
-    for (const k of trio.keys) { const c = C.CELL[k]; const [x, y] = px(c.x, c.y); hexPath(x, y, s * 0.9); ctx.stroke(); }
-    const [jx, jy] = px(trio.x, trio.y);
-    ctx.beginPath(); ctx.arc(jx, jy, s * 0.16, 0, Math.PI * 2); ctx.fillStyle = '#fff6dc'; ctx.fill();
-    ctx.beginPath(); ctx.arc(jx, jy, s * 0.62, -2.4, 0.6); ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,246,220,.7)'; ctx.stroke();
   }
   // particles
   particles = particles.filter(p => now - p.t0 < p.life);
@@ -1122,6 +1191,57 @@ function draw(now) {
 }
 requestAnimationFrame(draw);
 
+function liftedTrio(now) {
+  if (settle) { const t = Math.min(1, (now - settle.t0) / settle.dur); return { idx: settle.idx, ang: settle.from + (settle.to - settle.from) * ease(t), scale: 1.12 - 0.06 * t }; }
+  if (drag) return { idx: drag.idx, ang: drag.ang, scale: 1.12 };
+  if (selected >= 0 && !busy) return { idx: selected, ang: 0, scale: 1 + 0.08 * ease(Math.min(1, (now - selT) / 140)) };
+  return null;
+}
+function arrowArc(x, y, r, a0, a1) {
+  ctx.beginPath(); ctx.arc(x, y, r, a0, a1, a1 < a0); ctx.stroke();
+  const dir = a1 > a0 ? 1 : -1;
+  const hx = x + r * Math.cos(a1), hy = y + r * Math.sin(a1);
+  const tx = -Math.sin(a1) * dir, ty = Math.cos(a1) * dir; // tangent
+  const w = geo.s * 0.16;
+  ctx.beginPath();
+  ctx.moveTo(hx + tx * w, hy + ty * w);
+  ctx.lineTo(hx - tx * w * 0.2 + Math.cos(a1) * w, hy - ty * w * 0.2 + Math.sin(a1) * w);
+  ctx.lineTo(hx - tx * w * 0.2 - Math.cos(a1) * w, hy - ty * w * 0.2 - Math.sin(a1) * w);
+  ctx.closePath(); ctx.fill();
+}
+function drawLifted(lift, now) {
+  const s = geo.s;
+  const trio = C.TRIOS[lift.idx];
+  const [jx, jy] = px(trio.x, trio.y);
+  const good = (drag || settle) && previewKeys.size > 0;
+  const cos = Math.cos(lift.ang), sin = Math.sin(lift.ang);
+  const spots = [];
+  for (const k of trio.keys) {
+    const t = st.board[k]; if (!t) continue;
+    const [bx, by] = tilePos(t, k, now);
+    const dx = bx - trio.x, dy = by - trio.y;
+    const [x, y] = px(trio.x + (dx * cos - dy * sin) * lift.scale, trio.y + (dx * sin + dy * cos) * lift.scale);
+    spots.push([t, x, y]);
+  }
+  // soft shadow under the lifted cluster
+  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = s * 0.6; ctx.shadowOffsetY = s * 0.18; ctx.fillStyle = '#120a04';
+  for (const [, x, y] of spots) { hexPath(x, y, s * 0.86 * lift.scale); ctx.fill(); }
+  ctx.restore();
+  for (const [t, x, y] of spots) {
+    drawTile(t, x, y, s * 0.86 * lift.scale, 1);
+    hexPath(x, y, s * 0.89 * lift.scale); ctx.lineWidth = 3; ctx.strokeStyle = good ? '#7ff0b0' : '#fff6dc'; ctx.stroke();
+  }
+  ctx.beginPath(); ctx.arc(jx, jy, s * 0.13, 0, Math.PI * 2); ctx.fillStyle = good ? '#7ff0b0' : '#fff6dc'; ctx.fill();
+  if (!drag && !settle) {
+    // turn guide: arrows showing you can drag either way
+    const r = s * 1.95 * lift.scale;
+    ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(255,246,220,.5)'; ctx.fillStyle = 'rgba(255,246,220,.5)';
+    arrowArc(jx, jy, r, -2.3, -0.85);
+    if (!galeOn()) arrowArc(jx, jy, r, 2.3, 0.85);
+  }
+}
+const galeOn = () => !!(st && st.boss && st.boss.id === 'gale');
+
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
 
 function burstParticles(key, colour, n = 6) {
@@ -1138,7 +1258,6 @@ function renderHUD() {
   const rd = st.round;
   $('where').innerHTML = `Field <b>${st.field}</b>/8 · ${C.ROUND_NAMES[st.roundIdx]}${st.boss ? ' · <b style="color:var(--mult)">' + st.boss.name + '</b>' : ''}`;
   $('hearts').innerHTML = [0, 1, 2].map(i => `<span class="${i < st.hearts ? '' : 'lost'}">❤️</span>`).join('');
-  $('score').textContent = fmt(rd.score);
   $('target').textContent = fmt(rd.target);
   $('scoreFill').style.width = Math.min(100, rd.score / rd.target * 100) + '%';
   $('moves').textContent = rd.moves;
@@ -1174,7 +1293,7 @@ function info(html, useLabel, onUse) {
 function defaultInfo() {
   if (armedSeed >= 0) return;
   if (st.boss) info(`<b>${st.boss.name}:</b> ${st.boss.rule}`);
-  else info(selected >= 0 ? 'Swipe round, tap again, or use the buttons to turn.' : 'Tap where three cells meet, then turn them.');
+  else info(selected >= 0 ? 'Drag round to turn, then let go to lock it in. Or tap ↺ ↻.' : 'Press where three cells meet and drag round to turn them.');
 }
 let toastT = 0;
 function toast(text) {
@@ -1210,29 +1329,81 @@ function nearestCell(bx, by) {
   return bd < 1 ? best : null;
 }
 let down = null;
-cv.addEventListener('pointerdown', (e) => { audio(); down = { x: e.clientX, y: e.clientY, b: toBoard(e) }; cv.setPointerCapture(e.pointerId); });
-cv.addEventListener('pointerup', (e) => {
-  if (!down || !st || !st.round || busy) { down = null; return; }
-  const dx = e.clientX - down.x, dy = e.clientY - down.y, dist = Math.hypot(dx, dy);
-  const [bx, by] = down.b; down = null;
-  if (armedSeed >= 0) { const k = nearestCell(bx, by); if (k) useSeedAt(armedSeed, k); return; }
-  if (dist < 14) {
-    const t = nearestTrio(bx, by);
-    if (t < 0) { selected = -1; defaultInfo(); return; }
-    if (t === selected) { rotateSel(1); return; }
-    selected = t; sfx.click(); defaultInfo();
-  } else {
-    const t = nearestTrio(bx, by); if (t < 0) return;
-    selected = t;
-    const trio = C.TRIOS[t];
-    const [jx, jy] = px(trio.x, trio.y);
-    const r = cv.getBoundingClientRect();
-    const vx = (e.clientX - dx - r.left) - jx, vy = (e.clientY - dy - r.top) - jy;
-    let cross = vx * dy - vy * dx;
-    if (Math.hypot(vx, vy) < geo.s * 0.15) cross = dx;
-    rotateSel(cross > 0 ? 1 : -1);
-  }
+function canvasXY(e) { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
+function setSelected(i) {
+  if (i === selected) return;
+  selected = i; selT = performance.now();
+  if (i >= 0) { sfx.click(); buzz(5); }
+}
+function previewFor(idx, k) {
+  if (!k) return new Set();
+  const trio = C.TRIOS[idx], dir = k === 1 ? 1 : -1;
+  C.rotate(st.board, trio, dir);
+  const keys = new Set();
+  for (const g of C.findGroups(st, st.board)) g.keys.forEach(x => keys.add(x));
+  C.rotate(st.board, trio, -dir);
+  return keys;
+}
+cv.addEventListener('pointerdown', (e) => {
+  audio(); lastInput = performance.now(); hint = null;
+  if (!st || !st.round || busy || settle || drag) return;
+  try { cv.setPointerCapture(e.pointerId); } catch (err) {}
+  const [bx, by] = toBoard(e);
+  down = { x: e.clientX, y: e.clientY, b: [bx, by], id: e.pointerId };
+  if (armedSeed >= 0) return;
+  const t = nearestTrio(bx, by);
+  if (t < 0) { setSelected(-1); defaultInfo(); return; }
+  const was = selected === t;
+  setSelected(t);
+  const trio = C.TRIOS[t];
+  const [mx, my] = canvasXY(e), [jx, jy] = px(trio.x, trio.y);
+  const rad = Math.hypot(mx - jx, my - jy);
+  drag = { idx: t, was, ang: 0, k: 0, last: rad > geo.s * DEAD ? Math.atan2(my - jy, mx - jx) : null, moved: false };
+  previewKeys = new Set();
+  defaultInfo();
 });
+cv.addEventListener('pointermove', (e) => {
+  if (!drag || !down || e.pointerId !== down.id) return;
+  if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6) drag.moved = true;
+  const trio = C.TRIOS[drag.idx];
+  const [mx, my] = canvasXY(e), [jx, jy] = px(trio.x, trio.y);
+  const rad = Math.hypot(mx - jx, my - jy);
+  const a = Math.atan2(my - jy, mx - jx);
+  if (drag.last === null) { if (rad > geo.s * DEAD) drag.last = a; return; }
+  let d = a - drag.last;
+  if (d > Math.PI) d -= 2 * Math.PI; else if (d < -Math.PI) d += 2 * Math.PI;
+  drag.last = a;
+  if (rad < geo.s * 0.7) d *= Math.max(0, rad / (geo.s * 0.7)); // calm the jitter near the pivot
+  let ang = drag.ang + d;
+  if (galeOn()) ang = Math.max(-0.2, Math.min(TURN + 0.5, ang));
+  drag.ang = ang;
+  const k = ((Math.round(ang / TURN) % 3) + 3) % 3;
+  if (k !== drag.k) { drag.k = k; sfx.tick(); buzz(8); previewKeys = previewFor(drag.idx, k); }
+});
+function release(e, cancelled) {
+  if (!down || (e && e.pointerId !== down.id)) return;
+  const d0 = down; down = null;
+  if (armedSeed >= 0) { if (!cancelled) { const k = nearestCell(d0.b[0], d0.b[1]); if (k) useSeedAt(armedSeed, k); } return; }
+  const dr = drag; drag = null;
+  if (!dr) return;
+  if (!cancelled && dr.last !== null && Math.abs(dr.ang) > 0.12) {
+    const n = Math.round(dr.ang / TURN);
+    const k = ((n % 3) + 3) % 3;
+    const t = dur(k ? 130 : 180);
+    settle = { idx: dr.idx, from: dr.ang, to: n * TURN, t0: performance.now(), dur: t };
+    if (!k) previewKeys = new Set();
+    setTimeout(() => {
+      settle = null; previewKeys = new Set();
+      if (k) { sfx.lock(); buzz(14); playMove(dr.idx, k === 1 ? 1 : -1, true); }
+    }, t);
+    return;
+  }
+  if (cancelled && Math.abs(dr.ang) > 0.01) { settle = { idx: dr.idx, from: dr.ang, to: 0, t0: performance.now(), dur: dur(160) }; setTimeout(() => { settle = null; }, dur(160)); }
+  previewKeys = new Set();
+  if (!cancelled && !dr.moved && dr.was) rotateSel(1); // tap the same spot again: one step clockwise
+}
+cv.addEventListener('pointerup', (e) => release(e, false));
+cv.addEventListener('pointercancel', (e) => release(e, true));
 cv.addEventListener('wheel', (e) => { e.preventDefault(); if (selected >= 0) rotateSel(e.deltaY > 0 ? 1 : -1); }, { passive: false });
 window.addEventListener('keydown', (e) => {
   if ($('screen').hidden === false) return;
@@ -1316,6 +1487,7 @@ async function cascade(stepStart, pivotKeys) {
     applyFall(res.moves, dur(240));
     renderHUD();
     st.stats.bestStep = Math.max(st.stats.bestStep, step);
+    if (step >= 3) floaters.push({ x: 0, y: -C.R * 1.55, text: step >= 5 ? `Mega chain ×${step}!` : `Chain ×${step}!`, c: '#f5a623', t0: now + dur(120) });
     await wait(dur(240 + 420));
     step++; pivotKeys = [];
     if (step > 60) break;
@@ -1348,12 +1520,12 @@ async function afterSettle(countMove) {
   return status;
 }
 
-async function playMove(trioIdx, dir) {
-  busy = true;
+async function playMove(trioIdx, dir, skipArc) {
+  busy = true; hint = null;
   const trio = C.TRIOS[trioIdx];
   const now = performance.now();
-  // rotation arc animation
-  for (const k of trio.keys) {
+  // rotation arc animation (skipped when the drag has already turned the tiles)
+  if (!skipArc) for (const k of trio.keys) {
     const t = st.board[k]; if (!t) continue;
     const c = C.CELL[k];
     const a0 = Math.atan2(c.y - trio.y, c.x - trio.x);
@@ -1362,10 +1534,10 @@ async function playMove(trioIdx, dir) {
   const r = C.doRotate(st, trioIdx, dir);
   if (r && r.free) toast('Reverse Spin: free rotation');
   sfx.turn(); renderHUD();
-  await wait(dur(190));
+  if (!skipArc) await wait(dur(190));
   await cascade(1, trio.keys.slice());
   const status = await afterSettle(true);
-  busy = false;
+  busy = false; lastInput = performance.now();
   if (status === 'won') { selected = -1; await wait(dur(300)); roundWon(); }
   else if (status === 'lost') { selected = -1; await wait(dur(400)); runOver(); }
   else defaultInfo();
@@ -1378,31 +1550,56 @@ function showScreen(html, setup) {
 }
 function hideScreen() { $('screen').hidden = true; }
 
+function logoSVG(cls) {
+  const hex = (x, y, r) => [0, 1, 2, 3, 4, 5].map(i => `${(x + r * Math.cos(i * Math.PI / 3)).toFixed(1)},${(y + r * Math.sin(i * Math.PI / 3)).toFixed(1)}`).join(' ');
+  const cols = ['#F5A623', '#EC5F7C', '#3DC58B', '#4D9DEB', '#A57BE6', '#C2D93A'];
+  const ring = cols.map((c, i) => { const a = (30 + 60 * i) * Math.PI / 180; return `<polygon points="${hex(75 + 37.2 * Math.cos(a), 75 + 37.2 * Math.sin(a), 21)}" fill="${c}" stroke="#1c120a" stroke-width="3.5"/>`; }).join('');
+  return `<svg class="${cls}" viewBox="0 0 150 150" aria-hidden="true">
+    <g class="logo-ring">${ring}</g>
+    <polygon points="${hex(75, 75, 21)}" fill="#f3dfb5" stroke="#1c120a" stroke-width="3.5"/>
+    <path d="M 66.5 79.5 A 9.5 9.5 0 1 1 79.8 83.2" fill="none" stroke="#3a2410" stroke-width="3.6" stroke-linecap="round"/>
+    <polygon points="83.6,78.4 82.8,87.4 75.2,83.6" fill="#3a2410"/>
+  </svg>`;
+}
+const SAVE = 'run';
+function saveRun() { if (st && !st.over) store.set(SAVE, C.serialize(st)); }
+function clearSave() { try { localStorage.removeItem('hivemind.' + SAVE); } catch (e) {} }
+function loadSave() { const j = store.get(SAVE, null); if (!j) return null; try { return C.restore(j); } catch (e) { return null; } }
+
 function titleScreen() {
   st = null; $('app').style.visibility = 'hidden';
   const best = store.get('best', null);
+  const saved = loadSave();
+  const standalone = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
   showScreen(`
-    <svg class="title-hex" viewBox="0 0 160 120" aria-hidden="true">
-      ${[[50, 40, '#F5A623'], [80, 23, '#EC5F7C'], [110, 40, '#3DC58B'], [50, 74, '#4D9DEB'], [80, 57, '#f3dfb5'], [110, 74, '#A57BE6'], [80, 91, '#F5A623']].map(([x, y, c]) => {
-        const pts = [0, 1, 2, 3, 4, 5].map(i => `${x + 19 * Math.cos(i * Math.PI / 3)},${y + 19 * Math.sin(i * Math.PI / 3)}`).join(' ');
-        return `<polygon points="${pts}" fill="${c}" stroke="#1c120a" stroke-width="3"/>`; }).join('')}
-    </svg>
-    <div class="wordmark">Honeyspin</div>
+    ${logoSVG('logo')}
+    <div class="wordmark">Hive Mind</div>
     <div class="byline">by Samderverse</div>
-    <p style="text-align:center;color:var(--muted)">Spin the comb, match the pollen, survive eight fields.</p>
-    <button class="btn" id="newRun">New run</button>
+    <p style="text-align:center;color:var(--muted)">Spin the comb. Match the pollen. Survive eight fields.</p>
+    ${saved ? `<button class="btn" id="contBtn">Continue · Field ${saved.field}, ${C.ROUND_NAMES[saved.roundIdx].toLowerCase()}</button>` : ''}
+    <button class="btn ${saved ? 'ghost' : ''}" id="newRun">New run</button>
     <button class="btn ghost" id="howBtn">How to play</button>
     <div class="toggles">
       <button class="toggle" id="sndT">Sound: ${settings.sound ? 'on' : 'off'}</button>
       <button class="toggle" id="spdT">Speed: ${settings.speed}×</button>
     </div>
     ${best ? `<div class="fine">Best run: reached field ${best.field}${best.won ? ' and won' : ''} · best round ${fmt(best.score || 0)}</div>` : ''}
-    <div class="fine">v1 test build</div>
+    ${standalone ? '' : '<div class="install">Play full screen and offline: add Hive Mind to your home screen.<br><b>iPhone:</b> Share → Add to Home Screen · <b>Android:</b> ⋮ → Add to home screen</div>'}
+    <div class="fine">v1.1 test build</div>
   `, () => {
-    $('newRun').onclick = () => { audio(); startRun(); };
+    if (saved) $('contBtn').onclick = () => { audio(); resumeRun(saved); };
+    $('newRun').onclick = () => {
+      if (saved && $('newRun').dataset.sure !== '1') { $('newRun').dataset.sure = '1'; $('newRun').textContent = 'Tap again to start over'; return; }
+      audio(); clearSave(); startRun();
+    };
     $('howBtn').onclick = () => howTo(titleScreen);
     bindToggles(titleScreen);
   });
+}
+function resumeRun(saved) {
+  st = saved;
+  $('app').style.visibility = 'visible';
+  if (st.shop) shopScreen(); else roundIntro();
 }
 function bindToggles(back) {
   $('sndT').onclick = () => { settings.sound = !settings.sound; store.set('settings', settings); if (settings.sound) sfx.click(); back(); };
@@ -1413,7 +1610,8 @@ function howTo(back) {
   showScreen(`
     <h2>How to play</h2>
     <div class="howto"><ol>
-      <li><b>Tap where three cells meet.</b> Then swipe round, tap the same spot again, or use ↺ ↻ to turn them.</li>
+      <li><b>Press where three cells meet.</b> The three cells lift up. Drag your finger round and they turn with it. Let go to lock them in place, or turn them back to cancel.</li>
+      <li><b>Green outlines</b> show what will clear if you let go there. You can also tap ↺ ↻ to turn one step.</li>
       <li><b>Make triangles.</b> Three touching cells of one colour clear. Touching triangles join into bigger groups.</li>
       <li><b>Every turn costs a move.</b> Reach the target score before your moves run out.</li>
       <li><b>Score = pollen × mult.</b> Each cascade step adds mult, so chain reactions pay off.</li>
@@ -1439,6 +1637,7 @@ function startRun() {
 }
 
 function roundIntro() {
+  saveRun();
   const names = C.ROUND_NAMES;
   const base = (i) => { const save = st.roundIdx; st.roundIdx = i; const t = C.target(st); st.roundIdx = save; return t; };
   const moves = [20, 20, 18].map(m => m + (C.has(st, 'worker_wings') ? 3 : 0));
@@ -1458,8 +1657,9 @@ function roundIntro() {
 }
 
 async function beginRound() {
-  anims.clear(); dying = []; particles = []; selected = -1; armedSeed = -1;
+  anims.clear(); dying = []; particles = []; selected = -1; armedSeed = -1; drag = null; settle = null; hint = null;
   C.startRound(st);
+  shownScore = 0; $('score').textContent = '0'; lastInput = performance.now();
   renderHUD();
   // drop-in animation
   const now = performance.now();
@@ -1500,6 +1700,7 @@ function roundWon() {
 }
 
 function shopScreen() {
+  saveRun();
   const sh = st.shop;
   const bagCounts = {}; let gold = 0, glass = 0, wild = 0;
   for (const b of st.bag) { bagCounts[b.c] = (bagCounts[b.c] || 0) + 1; if (b.gold) gold++; if (b.glass) glass++; if (b.wild) wild++; }
@@ -1537,7 +1738,7 @@ function shopScreen() {
 }
 
 function runOver() {
-  sfx.lose(); buzz([80, 60, 120]);
+  sfx.lose(); buzz([80, 60, 120]); clearSave();
   const why = st.hearts <= 0 ? 'The wasps took your last heart.' : `You needed ${fmt(st.round.target)} and scored ${fmt(st.round.score)}.`;
   const best = store.get('best', { field: 0, score: 0 });
   store.set('best', { field: Math.max(best.field, st.field), score: Math.max(best.score || 0, st.round.score), won: best.won });
@@ -1555,6 +1756,7 @@ function runOver() {
   `, () => { $('againBtn').onclick = startRun; $('titleBtn').onclick = titleScreen; });
 }
 function runWon() {
+  clearSave();
   showScreen(`
     <div class="wordmark" style="font-size:54px">Hive saved!</div>
     <p style="text-align:center">You beat all eight fields.</p>
@@ -1578,19 +1780,25 @@ function menu() {
       <button class="toggle" id="sndT">Sound: ${settings.sound ? 'on' : 'off'}</button>
       <button class="toggle" id="spdT">Speed: ${settings.speed}×</button>
     </div>
+    <p class="fine">Your run is saved at the start of each round, so you can close the app and carry on later.</p>
     <button class="btn ghost" id="quitBtn">Abandon run</button>
   `, () => {
     $('resumeBtn').onclick = hideScreen;
     $('howBtn').onclick = () => howTo(menu);
     bindToggles(menu);
     $('quitBtn').onclick = () => {
-      $('quitBtn').textContent = 'Tap again to abandon'; $('quitBtn').onclick = titleScreen;
+      $('quitBtn').textContent = 'Tap again to abandon'; $('quitBtn').onclick = () => { clearSave(); titleScreen(); };
     };
   });
 }
 $('menuBtn').onclick = menu;
 // debug hook for testing in the browser console
-window.Honeyspin = { get state() { return st; }, playMove, give(n) { st.nectar += n; renderHUD(); } };
+window.HiveMind = { get state() { return st; }, playMove, give(n) { st.nectar += n; renderHUD(); } };
+
+// offline play when installed from GitHub Pages (only the packaged version links a manifest)
+if ('serviceWorker' in navigator && document.querySelector('link[rel="manifest"]')) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
 
 titleScreen();
 })();
